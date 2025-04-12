@@ -43,8 +43,9 @@ Developed and tested with Clojure 1.11.x and ClojureScript 1.11.x.
 Add the following dependency:
 
 **deps.edn:**
+
 ```clojure
-com.jolygon/poly-map {:mvn/version "x.x.x"} ; Replace x.x.x with the latest version
+com.jolygon/poly-map {:git/url "https://github.com/johnmn3/poly-map" :sha "487674108f92a3a587a709e3ec362017f539e39b"}
 ```
 
 ## Basic Usage (High-Level API)
@@ -250,10 +251,8 @@ See the high-level and low-level API code snippets provided earlier in this READ
 
 For more detailed examples covering both APIs, see:
 
-- [examples-high-level.md](./examples-high-level.md) (using `poly/assoc` with keywords)
+- [examples-high-level.md](./examples-high-level.md) (todo) (using `poly/assoc` with keywords)
 - [examples.md](./examples.md) (using `poly/assoc-impl` with `::pm/...` keys)
-
-_(Suggestion: Consider adding the high-level examples file or merging relevant examples into `examples.md`)_
 
 ### Performance
 
