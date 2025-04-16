@@ -45,7 +45,7 @@ Add the following dependency:
 **deps.edn:**
 
 ```clojure
-com.jolygon/poly-map {:mvn/version "0.1.4"}
+com.jolygon/poly-map {:mvn/version "0.1.5"}
 ```
 
 ## Basic Usage (High-Level API)
