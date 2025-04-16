@@ -1,0 +1,9 @@
+[tools]
+java = "temurin-21.0.2+13.0.LTS"
+clojure = "1.12.0.1517"
+babashka = "1.12.196"
+clj-kondo = "2025.01.16"
+cljfmt = "0.13.0"
+
+[alias]
+cljfmt = "asdf:https://github.com/b-social/asdf-cljfmt"
