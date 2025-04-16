@@ -48,7 +48,7 @@ jobs:
             echo "exists=false" >> $GITHUB_ENV
           fi
       - name: Publish GitHub Release
-        if: env.exists == 'false'
+        if: env.exists == 'false' && github.ref_name != ''  # Ensure it only runs when the tag doesn't exist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}
