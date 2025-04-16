@@ -1,7 +1,6 @@
 (ns ex.readme-md
   (:require
-   [com.jolygon.poly-map.api-0 :refer [poly-map]]
-   [com.jolygon.poly-map.api-0 :as poly]))
+   [com.jolygon.poly-map.api-0 :as poly :refer [poly-map]]))
 
 (def m1 (poly-map :a 1 :b 2))
 #_m1

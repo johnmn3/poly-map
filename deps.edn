@@ -1,19 +1,39 @@
 {:paths ["src"]
- :deps {org.clojure/clojure {:mvn/version "1.11.1"}
-        org.clojure/clojurescript {:mvn/version "1.11.132"}}
+ :deps {org.clojure/clojure {:mvn/version "1.12.0"}
+        org.clojure/clojurescript {:mvn/version "1.12.19"}}
  :aliases
- {:libra
+ {:dev {:extra-paths ["dev"]}
+  :outdated {:extra-deps {com.github.liquidz/antq ^:antq/exclude {:mvn/version "2.11.1276"}}
+             :main-opts ["-m" "antq.core" "--no-diff"]}
+  :build {:deps {io.github.abogoyavlensky/slim {:mvn/version "0.3.2"}
+                 slipset/deps-deploy {:mvn/version "0.2.2"}}
+          :ns-default slim.lib
+          :exec-args {:version "0.1.1"
+                      :lib com.jolygon/poly-map
+                      :url "https://github.com/johnmn3/poly-map"
+                      :description "map type maps"
+                      :developer "John Michael Newman III"}}
+  :libra
   {:extra-paths ["bench"]
    :extra-deps {net.totakke/libra {:mvn/version "0.1.1"}
                 criterium/criterium {:mvn/version "0.4.6"}
                 net.totakke/libra-runner {:git/url "https://github.com/totakke/libra"
-                                          :sha "6d2da78300438cb212b58d17675fc9e5d405ad49"
+                                          :sha "dce129caf930cf502db26331ef1333ce22501a82"
                                           :deps/root "libra-runner"}}
    :main-opts ["-m" "libra.runner"]}
+  :test {:extra-paths ["test"]
+         :extra-deps {eftest/eftest {:mvn/version "0.6.0"}
+                      cloverage/cloverage {:mvn/version "1.2.4"}}
+         :exec-fn cloverage.coverage/run-project
+         :exec-args {:test-ns-path ["test"]
+                     :src-ns-path ["src"]
+                     :runner :eftest
+                     :runner-opts {:multithread? false}}}
   :test-cljs
   {:extra-paths ["test"]
    :extra-deps {olical/cljs-test-runner {:mvn/version "3.8.1"}}
-   :main-opts ["-m" "cljs-test-runner.main"]}
+   :main-opts ["-m" "cljs-test-runner.main"]
+   :exec-fn com.jolygon.poly-map.api-0-test/-main}
   :test-clj
   {:extra-paths ["test"]
    :extra-deps {io.github.cognitect-labs/test-runner

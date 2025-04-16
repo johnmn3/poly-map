@@ -1,6 +1,6 @@
 (ns ex.examples-high-level-md
   (:require
-   [com.jolygon.poly-map.api-0 :as poly :refer [poly-map empty-poly-map]]))
+    [com.jolygon.poly-map.api-0 :as poly :refer [poly-map empty-poly-map]]))
 
 ;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -43,10 +43,10 @@
 (def case-insensitive-map
   (-> empty-poly-map
       (poly/assoc
-       :assoc     (fn [m k v] (assoc m     (normalize-key k) v))
-       :dissoc    (fn [m k]   (dissoc m    (normalize-key k)))
-       :contains? (fn [m k]   (contains? m (normalize-key k)))
-       :get  (fn [m k & [nf]] (get m       (normalize-key k) nf)))))
+        :assoc (fn [m k v] (assoc m (normalize-key k) v))
+        :dissoc (fn [m k] (dissoc m (normalize-key k)))
+        :contains? (fn [m k] (contains? m (normalize-key k)))
+        :get (fn [m k & [nf]] (get m (normalize-key k) nf)))))
 
 (def headers
   (-> case-insensitive-map
@@ -143,12 +143,13 @@
 
 (def notifying-map
   (-> empty-poly-map
-      (poly/assoc :assoc (fn [m k v]
-                           (notify-change :assoc k v)
-                           (assoc m k v))
-                  :dissoc (fn [m k]
-                            (notify-change :dissoc k nil)
-                            (dissoc m k)))))
+      (poly/assoc
+        :assoc (fn [m k v]
+                 (notify-change :assoc k v)
+                 (assoc m k v))
+        :dissoc (fn [m k]
+                  (notify-change :dissoc k nil)
+                  (dissoc m k)))))
 
 ;; ### Example:
 

@@ -1,0 +1,48 @@
+{:tasks
+ {:enter (println "Running task:" (:name (current-task)))
+
+  deps {:doc "Install all deps"
+        :task (clojure "-P -X:dev:test")}
+
+  fmt-check {:doc "Check code formatting"
+             :task (shell "cljfmt" "check")}
+
+  fmt {:doc "Fix code formatting"
+       :task (shell "cljfmt" "fix")}
+
+  lint-init {:doc "Import linting configs"
+             :task (shell "clj-kondo" "--parallel" "--dependencies" "--copy-configs"
+                          "--lint" (with-out-str (clojure "-Spath")))}
+
+  lint {:doc "Linting project's code"
+        :task (shell "clj-kondo" "--parallel" "--lint" "src" "test")}
+
+  test {:doc "Run tests"
+        :task (clojure "-X:dev:test")}
+
+  cljs-test {:doc "Run CLJS tests"
+             :task (clojure "-M:test-cljs")}
+
+  outdated-check {:doc "Check outdated Clojure deps versions"
+                  :task (clojure "-M:outdated")}
+
+  outdated {:doc "Upgrade outdated Clojure deps versions"
+            :task (clojure "-M:outdated --upgrade --force")}
+
+  check {:doc "Run all code checks and tests"
+         :depends [fmt lint outdated test cljs-test]}
+
+  install-snapshot {:doc "Install version locally"
+                    :task (clojure "-T:build install :snapshot true")}
+
+  install {:doc "Install version locally"
+           :task (clojure "-T:build install")}
+
+  deploy-snapshot {:doc "Deploy snapshot version to Clojars"
+                   :task (clojure "-T:build deploy :snapshot true")}
+
+  deploy-release {:doc "Deploy release version to Clojars"
+                  :task (clojure "-T:build deploy")}
+
+  release {:doc "Create and push git tag for release"
+           :task (clojure "-T:build tag :push true")}}}

@@ -27,7 +27,7 @@ Sometimes, you need a map that does *more* than just associate keys with values.
 ## Features
 
 * **Behavioral Customization:** Override standard map operations via high-level keywords (`:get`, `:assoc`, `:dissoc`, etc.) or low-level method keys.
-* **Function Call Override:** Make map instances callable with custom logic using the `:invoke` high-level keyword or low-level `::pm/invoke-variadic`.
+* **Function Call Override:** Make map instances callable with custom logic using the `:invoke` high-level keyword or low-level `::pm/invoke`.
 * **Custom Printing:** Control how the map is represented as a string using the `:print` high-level keyword or low-level keys.
 * **Transient Support:** Efficient batch updates using transients, with support for overriding transient-specific operations via low-level keys (`::tpm/...`).
 * **Metadata Preservation:** Correctly handles metadata (`meta`, `with-meta`).
@@ -36,7 +36,7 @@ Sometimes, you need a map that does *more* than just associate keys with values.
 
 ## Compatibility
 
-Developed and tested with Clojure 1.11.x and ClojureScript 1.11.x.
+Developed and tested with Clojure 1.12.x and ClojureScript 1.12.x.
 
 ## Installation
 
@@ -45,7 +45,7 @@ Add the following dependency:
 **deps.edn:**
 
 ```clojure
-com.jolygon/poly-map {:git/url "https://github.com/johnmn3/poly-map" :sha "487674108f92a3a587a709e3ec362017f539e39b"}
+com.jolygon/poly-map {:mvn/version "0.1.0-SNAPSHOT"}
 ```
 
 ## Basic Usage (High-Level API)
@@ -166,30 +166,10 @@ For finer control, direct access to underlying protocol/interface methods, or to
     - `metadata`: The map's metadata.
 
 2. **Implementation Keys**: Override functions are associated with namespaced keyword keys defined in:
-    - `com.jolygon.poly-map.api-0.keys`: For persistent map operations (e.g., `::pm/valAt_k_nf`). Recommended alias: `pm`.
-    - `com.jolygon.poly-map.api-0.trans.keys`: For transient map operations (e.g., `::tpm/assoc_k_v`). Recommended alias: `tpm`.
+    - `com.jolygon.poly-map.api-0.keys`: For persistent map operations (e.g., `::pm/valAt_k_nf`).
+    - `com.jolygon.poly-map.api-0.trans.keys`: For transient map operations (e.g., `::tpm/assoc_k_v`).
 
-```clojure
-(require '[com.jolygon.poly-map.api-0 :as poly] ;; Use poly for high-level too
-         '[com.jolygon.poly-map.api-0.keys :as pm]
-         '[com.jolygon.poly-map.api-0.trans.keys :as tpm])
-
-pm/valAt_k_nf ;;=> :com.jolygon.poly-map.api-0.keys/valAt_k_nf
-tpm/assoc_k_v  ;;=> :com.jolygon.poly-map.api-0.trans.keys/assoc_k_v
-```
-
-Refer to the docstrings of the vars in these namespaces for a full list of available keys and the exact interface methods they correspond to.
-
-3. **Override Function Signatures**: Low-level override functions receive more arguments:
-
-    - **Persistent**: `(fn [this m impls metadata & operation-args] ...)`
-    - **Transient**: `(fn [this t_m impls metadata & operation-args] ...)`
-        - `this`: The PolyMap or TransientPolyMap instance.
-        - `m`/`t_m`: The underlying persistent/transient data map.
-        - `impls`: The implementations map.
-        - `metadata`: The metadata map.
-        - `operation-args`: Arguments specific to the low-level operation (e.g., `k`, `v`, `nf`, `f`, `init`).
-    - **Return Values**: Must return the exact type expected by the underlying protocol/interface method (e.g., a new persistent `PolyMap` for `::pm/assoc_k_v`, the transient this for `::tpm/assoc_k_v`). Often requires using `poly/make-poly-map` or `poly/make-transient-poly-map` for construction. See `impl` key docstrings and source (`impl.clj`) for details.
+3. **Override Function Signatures**: Low-level override functions receive more arguments (see `keys.cljc` and `trans/keys.cljc` docstrings for details). They often need to return a new `PolyMap` instance (for persistent ops) or `this` (for transient ops).
 
 4. **Providing Implementations**: Use `poly/assoc-impl`, `poly/dissoc-impl`, `poly/set-impls`.
 
@@ -220,51 +200,44 @@ Refer to the docstrings of the vars in these namespaces for a full list of avail
 ;=> "Map is read-only"
 ```
 
-## API Overview
-
-The public API is in `com.jolygon.poly-map.api-0`. Future versions may use `.api-N`.
-
-**Key Functions**:
-
-- **High-Level API**:
-    - `poly-map`, `empty-poly-map`: Create persistent poly-map instances.
-    - `assoc`: Attaches behavior handlers using keywords (`:get`, `:assoc`, etc.). Returns a new persistent poly-map.
-    - `dissoc`: Removes behavior handlers associated with specific keywords. Returns a new persistent poly-map.
-- **Low-Level API**:
-    - `assoc-impl`, `dissoc-impl`: Add/remove low-level impl overrides using namespaced keywords (returns new persistent map).
-    - `set-impls`: Replace the entire low-level impls map (returns new persistent map).
-    - `get-impls`: Get the persistent low-level impls map.
-    - `get-coll`: Get the underlying persistent data map (`m`).
-    - `contains-impl?`, `get-impl`: Check for/retrieve a specific low-level override function.
-    - `make-poly-map`, `make-transient-poly-map`: Raw constructors (use with caution, prefer standard creation/update functions).
-
-- **Implementation Key Definitions**:
-
-    - `com.jolygon.poly-map.api-0.keys`: Vars holding keywords for **persistent** low-level overrides (`::pm/...`).
-    - `com.jolygon.poly-map.api-0.trans.keys`: Vars holding keywords for **transient** low-level overrides (`::tpm/...`).
-
-Please refer to the docstrings of the API functions and the impl key vars for detailed usage and signatures.
-
 ### Examples
-
-See the high-level and low-level API code snippets provided earlier in this README for common use cases.
 
 For more detailed examples covering both APIs, see:
 
-- [examples-high-level.md](./examples-high-level.md) (todo) (using `poly/assoc` with keywords)
-- [examples.md](./examples.md) (using `poly/assoc-impl` with `::pm/...` keys)
+- [examples-high-level.md](./bench/ex/examples-high-level.md) (todo) (using `poly/assoc` with keywords)
+- [examples.md](./bench/ex/examples.md) (using `poly/assoc-impl` with `::pm/...` keys)
 
 ### Performance
 
-- **General**: Expect poly-maps to be roughly 25% to 50% as fast as native hash-maps for mixed workloads currently.
-- **Reads**: Simple read operations (`get`, keyword lookup) can sometimes meet or slightly exceed native hash-map performance due to direct delegation.
-- **Writes**/**Updates**: Operations requiring the construction of new poly-map instances (`assoc`, `dissoc`) incur more overhead.
-- **Known Bottlenecks**:
-    - Calling `apply` on a poly-map instance can be particularly slow.
-    - Repeatedly `assoc`ing onto very large poly-maps needs optimization.
-- **Note**: Performance hasn't been a primary focus yet. The main overhead often comes from the custom logic added via handlers, which would exist elsewhere in your program anyway. Contributions for optimization are welcome!
+Significant performance optimizations have been implemented, including specializing internal types and optimizing constructors.
 
-See [bench/ex/clj-bench.md]() for benchmark details.
+* **Overall**: Based on recent benchmarks (Run 5/6), baseline `poly-map` operations (reads, writes, construction, reduction, batch transient updates) now perform very close to, and sometimes exceed, the speed of standard Clojure/Script hash maps and transients.
+* **CLJ**: The geometric mean across baseline operations showed `poly-map` at ~95% the speed of standard maps.
+* **CLJS**: The geometric mean across baseline operations showed `poly-map` at ~72% the speed of standard maps, heavily influenced by the `persistent!` cost. Many individual CLJS operations (writes, reductions) were faster than standard maps.
+* **Bottleneck**: The primary remaining bottleneck relative to standard maps appears to be the cost of transitioning from a transient poly-map back to a persistent one (`persistent!`), especially in ClojureScript.
+* **Overrides**: Adding custom behavior via handlers still incurs some overhead compared to baseline poly-map operations, which is expected. However, the baseline is now much faster.
+
+See ./bench/ex/clj-bench.md for Clojure benchmark details and ./bench/ex/cljs-bench.md for ClojureScript benchmark details. Contributions for further optimization are welcome!
+
+### See Also
+
+* **Potemkin** (`def-map-type`): Potemkin's `def-map-type` is excellent for creating _new, specific map-like types_ that efficiently implement map interfaces, often based on delegating to underlying fields or structures. Choose `def-map-type` when you need a new, static, record-like data type with map semantics. Choose `poly-map` when you want to add dynamic behaviors (validation, logging, computation, interception) to existing map data or general-purpose map structures without defining a whole new type, or when you want to change behaviors dynamically using `assoc-impl`/`set-impls`.
+* `defrecord` / `deftype`: Suitable for creating fixed-schema, efficient data structures. They can implement protocols for map-like behavior, but you implement the methods directly. Less flexible for dynamic behavior modification compared to `poly-map`.
+* **Protocols**: Clojure's protocols allow defining interfaces that different types can implement. You could define a protocol for custom map behavior, but `poly-map` provides a ready-made implementation structure focused specifically on wrapping and intercepting standard map operations.
+* **Schema Libraries (Malli, Spec)**: Primarily focused on data validation and specification, often used externally to map operations rather than being baked into the map's behavior itself, although they can be integrated using `poly-map` handlers (as shown in examples).
+* **Proxy**: Allows dynamic implementation of interfaces, but generally comes with a larger performance overhead than `deftype` or `poly-map`'s approach.
+
+### Changelog
+
+#### v0.1.0 (YYYY-MM-DD)
+
+* Major Performance Optimizations:
+  * Implemented specialized internal types (PolyMap+...) to significantly speed up baseline assoc and get operations by reducing runtime dispatch overhead.
+  * Optimized poly-map constructor, especially when called via apply, bringing performance close to native hash-map.
+  * Improved transient batch assoc! performance to be nearly on par with native transients.
+  * Improved persistent! performance, though it remains an area with overhead compared to native maps.
+* Introduced High-Level API: Added poly/assoc and poly/dissoc functions using simple keywords (e.g., :get, :assoc) for easier customization of common behaviors.
+* Added examples-high-level.md (TODO) and updated documentation.
 
 ### Development
 
@@ -275,14 +248,14 @@ Clone the repository and run tests using the Clojure CLI:
 clj -X:test-clj
 
 # ClojureScript tests (requires NodeJS)
-clj -Atest-cljs
+clj -M:test-cljs
 ```
 
 To run benchmarks:
 
 # Run Clojure benchmarks
 ```bash
-clj -Alibra
+clj -M:libra
 ```
 
 ### License

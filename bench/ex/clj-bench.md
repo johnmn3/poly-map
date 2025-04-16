@@ -1,6 +1,33 @@
-Measuring ex.core-bench
+# CLJ `poly-map` Performance and Recent Improvements
 
-### Frontmatter
+This document outlines the performance of `poly-map`s in Clojure. If you're looking for the CLJS benchmarks [look here](./cljs-bench.md).
+
+## Improvement
+
+The initial release included some benchmark numbers. This table below shows how the performance of `poly-map`s have improved since then:
+
+| Benchmark Operation |	Initial |	Later |	Overall Change (%) |
+| ------- | ------- | ------- | ------- |
+| Read Existing Key (Bench 1) |	98.9% |	98.8% |	-0.1% |
+| Read Missing Key (Bench 2) | 55.4% | 88.2% | +59.2% |
+| Write (Update Existing Key) (Bench 3) | 91.9% | 95.1% | +3.5% |
+| Reduce (Sum Values) (Bench 4) | 99.7% | 91.3% | -8.4% |
+| Construct (`into`) (Bench 5) | 55.1% | 92.0% | +67.0% |
+| Construct (`apply`) (Bench 6) | 12.8% | 110.6% | +764.1% |
+| Simple `assoc` (Baseline Poly - Bench 7) | 52.9% | 63.0% | +19.1% |
+| Simple `assoc` (Logging Poly - Bench 7) | 16.4% | 38.5% | +134.8% |
+| `assoc` New Key (Baseline Poly - Bench 8) | 5.35%* | 88.9% | +1561.7% |
+| `assoc` New Key (Validated Poly - Bench 8) | 4.3%* | 74.5% | +1632.6% |
+| Batch `assoc!` (Baseline Poly - Bench 9) | 33.9% | 96.1% | +183.5% |
+| Batch `assoc!` (Logging Poly - Bench 9) | 53.5%* | 94.8% | +77.2% |
+| `persistent!` Cost (Bench 10) | 31.0% | 45.2% | +45.8% |
+| Contended Update (Illustrative - Bench 11) | 38.4% | 95.1% | +147.7% |
+
+As you can see, except for very small maps and override scenarios, `poly-map`s are generally within 10% of the performance of stock Clojure `hash-map`s.
+
+## Frontmatter
+
+To get us started, here are some forms that will help us compare `poly-map`s and `hash-map`s.
 
 ```clojure
 (ns ex.core-bench
@@ -15,7 +42,7 @@ Measuring ex.core-bench
   (def small-poly-map (poly-map :a 1 :b 2 :c 3))
   (def large-map-size 10000)
   (def large-std-map (into {} (mapv (fn [i] [(keyword (str "k" i)) i]) (range large-map-size))))
-  (def large-poly-map (into empty-poly-map large-std-map))
+  (def large-poly-map (poly-map large-std-map))
   (def keys-to-access (vec (keys large-std-map)))
   (defn rand-key [] (rand-nth keys-to-access))
 
@@ -41,230 +68,216 @@ Measuring ex.core-bench
   :end)
 ```
 
-## baseline-read-large-standard-map
-```clojure
-(get large-std-map (rand-key))
-```
-* time: 22.785000 µs, sd: 56.325663 µs
-### baseline-read-large-poly-map
+## Baseline Operations (Large Map - 10k elements)
+
+### Read Existing Key (Bench 1):
+
 ```clojure
 (get large-poly-map (rand-key))
 ```
-* time: 18.674700 µs, sd: 22.829404 µs
 
-_poly is 122.06% the speed of standard, or_
-_standard is 77.94% the speed of poly_
+  - Standard Map: 128.21 ns
+  - Poly Map: 129.78 ns
+  - Poly Map Speed: 98.8% of Standard
 
-    |------------------------------------------------| 100% poly-map
-    |-------------------------------------| 77.94% regular map
-
-## baseline-read-large-standard-map
 ```clojure
-(get large-std-map :not-a-key :default-val)
+|-------------------------| Poly (98.8%)
+|-------------------------| Std (100%)
+| 0%  | 25%  | 50% | 75%  | 100%
 ```
-* time: 119.302140 ns, sd: 0.000000 ns
-### baseline-read-large-poly-map
-```clojure
-(get large-poly-map :not-a-key :default-val)
-```
-* time: 87.455270 ns, sd: 0.000000 ns
 
-_poly is 136.4% the speed of standard, or_
-_standard is 63.6% the speed of poly_
+### Read Missing Key (Bench 2):
 
-    |-------------------------------------------------| 100% poly-map
-    |------------------------------| 63.6% regular map
-
-## baseline-read-missing-key-standard
-```clojure
-(get large-std-map :not-a-key :default-val)
-```
-* time: 14.740737 ns, sd: 0.000000 ns
-### baseline-read-missing-key-poly
 ```clojure
 (get large-poly-map :not-a-key :default-val)
 ```
-* time: 14.588405 ns, sd: 0.000000 ns
 
-_poly is 101.03% the speed of standard, or_
-_standard is 98.97% the speed of poly_
+- Standard Map: 13.66 ns
+- Poly Map: 15.48 ns
+- Poly Map Speed: 88.2% of Standard
 
-    |------------------------------------------------| 100% poly-map
-    |-----------------------------------------------| 98.97% regular map
-
-## baseline-write-large-map-update-standard
 ```clojure
-(assoc large-std-map (rand-key) 999)
+|----------------------|  | Poly (88.2%)
+|-------------------------| Std (100%)
+| 0%  | 25%  | 50% | 75%  | 100%
 ```
-* time: 182.456647 ns, sd: 0.000000 ns
-### baseline-write-large-map-update-poly
+
+### Write (Update Existing Key) (Bench 3):
+
 ```clojure
 (assoc large-poly-map (rand-key) 999)
 ```
-* time: 654.924066 ns, sd: 0.000000 ns
 
-_poly is 27.85% the speed of standard_
+- Standard Map: 192.15 ns
+- Poly Map: 202.10 ns
+- Poly Map Speed: 95.1% of Standard
 
-    |____________| 27.85% poly-map
-    |------------------------------------------------| 100% regular map
-
-## baseline-reduce-large-map-sum-values-standard
 ```clojure
-(reduce-kv (fn [acc _ v] (+ acc v)) 0 large-std-map)
+|------------------------|| Poly (95.1%)
+|-------------------------| Std (100%)
+| 0%  | 25%  | 50% | 75%  | 100%
 ```
-* time: 98.503084 µs, sd: 0.002084 ns
-### baseline-reduce-large-map-sum-values-poly
+
+### Reduce (Sum Values) (Bench 4):
+
 ```clojure
 (reduce-kv (fn [acc _ v] (+ acc v)) 0 large-poly-map)
 ```
-* time: 159.783483 ns, sd: 0.000000 ns
 
-_poly is 61.65% the speed of standard_
+- Standard Map: 176.11 µs
+- Poly Map: 192.87 µs
+- Poly Map Speed: 91.3% of Standard
 
-    |----------------------------| 61.65% poly-map
-    |------------------------------------------------| 100% regular map
-
-## baseline-construct-large-map-into-standard
 ```clojure
-(def large-map-data (vec (mapcat (fn [i] [(keyword (str "k" i)) i]) (range large-map-size))))
-
-(into {} (mapv vec (partition 2 large-map-data))
+|-----------------------| | Poly (91.3%)
+|-------------------------| Std (100%)
+| 0%  | 25%  | 50% | 75%  | 100%
 ```
-* time: 6.030740 ms, sd: 22.856592 ns
-### baseline-construct-large-map-into-poly
+
+### Construct (into) (Bench 5):
+
 ```clojure
-(into empty-poly-map (mapv vec (partition 2 large-map-data))
+(into empty-poly-map (mapv vec (partition 2 large-map-data)))
 ```
-* time: 10.361717 ms, sd: 76.730260 ns
 
-_poly is 58.2% the speed of standard_
+- Standard Map: 6.91 ms
+- Poly Map: 7.50 ms
+- Poly Map Speed: 92.0% of Standard
 
-    |---------------------------| 58.2% poly-map
-    |------------------------------------------------| 100% regular map
-
-## baseline-construct-large-map-apply-standard
 ```clojure
-(apply hash-map large-map-data)
+|-----------------------| | Poly (92.0%)
+|-------------------------| Std (100%)
+| 0%  | 25%  | 50% | 75%  | 100%
 ```
-* time: 1.328213 ms, sd: 0.356873 ns
-### baseline-construct-large-map-apply-poly
+
+### Construct (apply) (Bench 6):
+
 ```clojure
 (apply poly-map large-map-data)
 ```
-* time: 10.391062 ms, sd: 48.752624 ns
 
-_poly is 12.8% the speed of standard_
+- Standard Map: 1.77 ms
+- Poly Map: 1.60 ms
+- Poly Map Speed: 110.6% of Standard (Poly Faster!)
 
-    |----| 12.8% poly-map
-    |------------------------------------------------| 100% regular map
-
-We need to optimize `apply`.
-
-## override-impact-simple-assoc-standard
 ```clojure
-(assoc small-std-map :d 4)
+|-----------------------------| Poly (110.6%)
+|-------------------------| Std (100%)
+| 0%  | 25%  | 50% | 75%  | 100%
 ```
-* time: 29.508727 ns, sd: 0.000000 ns
-### override-impact-simple-assoc-poly
+
+## Override Impact
+
+### Simple assoc (Small Map - Bench 7):
+
 ```clojure
 (assoc small-poly-map :d 4)
 ```
-* time: 40.261695 ns, sd: 0.000000 ns
-_poly is 73.3% the speed of standard_
-### override-impact-simple-logging-assoc-poly
+
+- Standard Map: 35.87 ns
+- Poly Map (Baseline): 56.93 ns -> 63.0% of Standard
+
+```clojure
+|----------------|        | Poly (Baseline - 63.0%)
+|-------------------------| Std (100%)
+| 0%  | 25%  | 50% | 75%  | 100%
+```
+
 ```clojure
 (assoc logged-poly-map :d 4)
 ```
-* time: 179.260320 ns, sd: 0.000000 ns
 
-_logging poly is 16.4% the speed of standard_
+- Poly Map (Logging): 93.17 ns -> 38.5% of Standard
 
-    |------| 16.4% logging poly-map
-    |-----------------------------------| 73.3% poly-map
-    |------------------------------------------------| 100% regular map
-
-## override-impact-large-assoc-new-key-standard
 ```clojure
-(assoc small-std-map :d 4) ; again
+|---------|               | Poly (Logging - 38.5%)
+|-------------------------| Std (100%)
+| 0%  | 25%  | 50% | 75%  | 100%
 ```
-* time: 29.544054 ns, sd: 0.000000 ns
-### override-impact-large-assoc-new-key-poly
+
+### assoc New Key (Large Map - Bench 8):
+
 ```clojure
 (assoc large-poly-map :d 4)
 ```
-* time: 551.991061 ns, sd: 0.000000 ns
-_poly is 5.35% the speed of standard_
-### override-impact-large-validated-assoc-new-key-poly
+
+- Standard Map: 96.43 ns
+- Poly Map (Baseline): 108.39 ns -> 88.9% of Standard
+
+```clojure
+|----------------------|  | Poly (Baseline - 88.9%)
+|-------------------------| Std (100%)
+| 0%  | 25%  | 50% | 75%  | 100%
+```
+
 ```clojure
 (assoc validated-poly-map :d 4)
 ```
-* time: 686.209108 ns, sd: 0.000000 ns
 
-_validated poly is 4.3% the speed of standard_
+- Poly Map (Validated): 129.51 ns -> 74.5% of Standard
 
-    || 4.3% validated poly-map
-    |-| 5.35% poly-map
-    |------------------------------------------------| 100% regular map
+```clojure
+|------------------|      | Poly (Validated - 74.5%)
+|-------------------------| Std (100%)
+| 0%  | 25%  | 50% | 75%  | 100%
+```
 
-This might be a bug. Super slow.
+## Transient Operations
 
-## transient-batch-assoc!-standard
+### Batch assoc! (Large Map - Bench 9):
+
 ```clojure
 (def items-to-add (vec (range large-map-size)))
 
-(persistent! (reduce (fn [t i] (assoc! t (keyword (str "new" i)) i)) (transient {}) items-to-add))
-```
-* time: 2.146258 ms, sd: 3.514564 ns
-### transient-batch-assoc!-poly
-```clojure
 (persistent! (reduce (fn [t i] (assoc! t (keyword (str "new" i)) i)) (transient empty-poly-map) items-to-add))
 ```
-* time: 6.340604 ms, sd: 95.930049 ns
-_transient poly is 33.91% the speed of standard transient_
-### transient-batch-assoc!-logging-poly
-```clojure
-(def logged-transient-map
-  (-> empty-poly-map
-      (poly/assoc-impl
-       ::tpm/assoc_k_v
-       (fn [_this t-m impls metadata k v]
-         (swap! log-atom inc)
-         (poly/make-transient-poly-map (java.util.concurrent.atomic.AtomicBoolean. true) (assoc! t-m k v) impls metadata)))))
 
+- Standard Transient: 2.33 ms
+- Poly Map Transient (Baseline): 2.42 ms -> 96.1% of Standard
+
+```clojure
+|------------------------|| Poly (Baseline - 96.1%)
+|-------------------------| Std (100%)
+| 0%  | 25%  | 50% | 75%  | 100%
+```
+
+```clojure
 (persistent! (reduce (fn [t i] (assoc! t (keyword (str "new" i)) i)) (transient logged-transient-map) items-to-add))
 ```
-* time: 4.018140 ms, sd: 12.327567 ns
 
-_transient logging poly is 53.48% the speed of standard transient_
+- Poly Map Transient (Logging): 2.46 ms -> 94.8% of Standard
 
-    |--------------| 33.91% logging transient poly-map
-    |-------------------------| 53.48% transient poly-map
-    |------------------------------------------------| 100% transient map
-
-## transient-persistent!-cost-standard
 ```clojure
-(persistent! (transient large-std-map))
+|------------------------|| Poly (Logging - 94.8%)
+|-------------------------| Std (100%)
+| 0%  | 25%  | 50% | 75%  | 100%
 ```
-* time: 41.295457 ns, sd: 0.000000 ns
-### transient-persistent!-cost-poly
+
+### persistent! Cost (Large Map - Bench 10):
+
 ```clojure
 (persistent! (transient large-poly-map))
 ```
-* time: 133.183714 ns, sd: 0.000000 ns
 
-_poly is 31.01% the speed of standard_
+- Standard Transient: 41.46 ns
+- Poly Map Transient: 91.79 ns
+- Poly Map Speed: 45.2% of Standard
 
-    |--------------| 31.01% transient poly-map
-    |------------------------------------------------| 100% transient map
+```clojure
+|-----------|             | Poly Persistent! (45.2%)
+|-------------------------| Std Persistent! (100%)
+| 0%  | 25%  | 50% | 75%  | 100%
+```
 
-## transient-contended-standard
+### Contended Update (Illustrative - Bench 11):
+
 ```clojure
 (def counter (atom 0))
 (def contended-poly-map
-  (poly/assoc-impl poly/empty-poly-map
+  (poly/assoc-impl empty-poly-map
                    ::tpm/assoc_k_v
-                   (fn [this t-m impls metadata k v]
-                     (swap! counter inc) ; Shared mutable state
+                   (fn [_this t-m impls metadata k v]
+                     (swap! counter inc)
                      (poly/make-transient-poly-map (java.util.concurrent.atomic.AtomicBoolean. true) (assoc! t-m k v) impls metadata))))
 
 (defn contended-poly-update [n-updates]
@@ -277,27 +290,15 @@ _poly is 31.01% the speed of standard_
                                     (range n-updates))))))]
     (run! deref futures))) ; Wait for all futures
 
-(def contended-std-map {})
-
-(defn contended-std-update [n-updates]
-  (let [futures (doall (for [_ (range 10)] ; Simulate 10 threads
-                         (future
-                           (persistent!
-                            (reduce (fn [t i] (assoc! t (keyword (str "k" i)) i))
-                                    (transient contended-std-map)
-                                    (range n-updates))))))]
-    (run! deref futures))) ; Wait for all futures
-
-(contended-std-update 100)
-```
-* time: 80.872325 µs, sd: 0.016305 ns
-### transient-contented-poly
-```clojure
 (contended-poly-update 100)
 ```
-* time: 210.668691 µs, sd: 0.006115 ns
 
-_poly is 38.39% the speed of standard_
+- Standard Transient: 82.94 µs
+- Poly Map Transient: 87.20 µs
+- Poly Map Speed: 95.1% of Standard
 
-    |-----------------| 38.39% transient contended poly-map
-    |------------------------------------------------| 100% transient contended map
+```clojure
+|------------------------|| Poly Contended (95.1%)
+|-------------------------| Std Contended (100%)
+| 0%  | 25%  | 50% | 75%  | 100%
+```

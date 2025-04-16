@@ -24,7 +24,7 @@
   constructors if needed, preserving implementations and metadata appropriately."
   (:refer-clojure :exclude [count empty seq iterator get assoc dissoc meta reduce])
   (:require
-   [clojure.core :as c]))
+    [clojure.core :as c]))
 
 (defn ^:private default-map-invoke
   "Default IFn invoke behavior for PolyMap when no custom ::invoke-variadic
@@ -32,11 +32,11 @@
   (map key nf) provides default (arity 2). Throws exceptions for all
   other arities (0, 3+)."
   ;; Arity 0: Invalid for map lookup
-  ([_this m _impls _metadata]
+  ([_this _m _impls _metadata]
    (throw (ex-info "Invalid arity: 0"
                    {:error :invalid-arity
                     :arity 0
-                    :args  []})))
+                    :args []})))
   ;; Arity 1: Standard map lookup (key)
   ([_this m _impls _metadata k]
    (c/get m k)) ;; Use aliased c/get
@@ -44,13 +44,13 @@
   ([_this m _impls _metadata k nf]
    (c/get m k nf)) ;; Use aliased c/get
   ;; Arity 3: Invalid for map lookup
-  ([_this m _impls _metadata a1 a2 a3]
+  ([_this _m _impls _metadata a1 a2 a3]
    (throw (ex-info "Invalid arity: 3"
                    {:error :invalid-arity
                     :arity 3
-                    :args  [a1 a2 a3]})))
+                    :args [a1 a2 a3]})))
   ;; Variadic Arity (5+): Invalid for map lookup
-  ([_this m _impls _metadata a1 a2 a3 a4 & rest-args]
+  ([_this _m _impls _metadata a1 a2 a3 a4 & rest-args]
    (let [;; Calculate the actual total arity
          arity (+ 4 (c/count rest-args))
          ;; Combine all arguments for the error map
@@ -58,7 +58,7 @@
      (throw (ex-info (str "Invalid arity: " arity)
                      {:error :invalid-arity
                       :arity arity
-                      :args  all-args})))))
+                      :args all-args})))))
 
 (defn handle-invoke
   "Core IFn invocation handler for PolyMap instances.
@@ -143,8 +143,8 @@
   Applies ::pm/construct hook if present.
   Returns a PolyMap."
   [this m impls metadata]
-  (if-let [construct (::construct impls)]
-    (construct this m impls metadata)
+  (if-let [construct* (::construct impls)]
+    (construct* this m impls metadata)
     [this m impls metadata]))
 
 ;; --- Protocols ---

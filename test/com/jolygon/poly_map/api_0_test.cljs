@@ -1,9 +1,10 @@
 (ns com.jolygon.poly-map.api-0-test
   (:require
-   [clojure.test :refer [deftest is]]
-   [com.jolygon.poly-map.api-0 :as poly :refer [empty-poly-map poly-map]]
-   [com.jolygon.poly-map.api-0.keys :as pm]
-   [com.jolygon.poly-map.api-0.trans.keys :as tpm]))
+    [clojure.test :refer [deftest is]]
+    [com.jolygon.poly-map.api-0 :as poly :refer [empty-poly-map poly-map]]
+    [com.jolygon.poly-map.api-0.impl :as mi]
+    [com.jolygon.poly-map.api-0.keys :as pm]
+    [com.jolygon.poly-map.api-0.trans.keys :as tpm]))
 
 (deftest poly-map-build-test
   (is (= (type empty-poly-map) (type (poly-map))))
@@ -109,7 +110,7 @@
   (is (= (vals (poly-map)) nil))
   (is (= (vals (poly-map :a 1)) '(1)))
   (is (= (vals (poly-map nil 1)) '(1))))
-
+#_{:clj-kondo/ignore [:single-key-in]}
 (deftest poly-map-get-test
   (let [m (poly-map :a 1, :b 2, :c {:d 3, :e 4}, :f nil, :g false, nil {:h 5})]
     (is (= (get m :a) 1))
@@ -176,7 +177,6 @@
       (is (poly/contains-impl? updated-dm ::new-impl) "New impl should be added after assoc-impl")
       (is (= "new" ((poly/get-impl updated-dm ::new-impl))) "New impl should be callable"))))
 
-
 ;; --- Tests for Implementation Manipulation API ---
 
 (deftest test-impl-api-persistent
@@ -216,19 +216,19 @@
 (deftest test-override-get-default-value
   (let [default-val :i-am-default
         m (poly/assoc-impl
-           (poly/poly-map :a 1)
-           ::pm/-lookup_k_nf
-           (fn [_this m _impls _metadata k _nf]
-             (let [val (get m k ::nf)]
-               (if (= val ::nf)
-                 default-val ;; Return custom default
-                 val)))
-           ::pm/-lookup_k
-           (fn [_this m _impls _metadata k]
-             (let [val (get m k ::nf)] ;;<- same as above
-               (if (= val ::nf)
-                 default-val
-                 val))))]
+            (poly/poly-map :a 1)
+            ::pm/-lookup_k_nf
+            (fn [_this m _impls _metadata k _nf]
+              (let [v (get m k ::nf)]
+                (if (= v ::nf)
+                  default-val ;; Return custom default
+                  v)))
+            ::pm/-lookup_k
+            (fn [_this m _impls _metadata k]
+              (let [v (get m k ::nf)] ;;<- same as above
+                (if (= v ::nf)
+                  default-val
+                  v))))]
     (is (= 1 (get m :a)) "Getting existing key works normally")
     (is (= 1 (get m :a :wrong-default)) "Getting existing key ignores nf")
     (is (= default-val (get m :b)) "Getting missing key returns custom default")
@@ -237,25 +237,25 @@
 (deftest test-override-assoc-validation
   (let [validated-map
         (poly/assoc-impl
-         poly/empty-poly-map
-         ::pm/-assoc_k_v
-         (fn [_this m impls _metadata k v]
-           (if (string? v)
+          poly/empty-poly-map
+          ::pm/-assoc_k_v
+          (fn [_this m impls _metadata k v]
+            (if (string? v)
              ;; Construct new map instance - using impl constructor for now
-             (poly/make-poly-map (assoc m k (str "Validated: " v)) impls)
-             (throw (ex-info "Validation failed: Value must be string" {:key k :value v})))))]
+              (poly/make-poly-map (assoc m k (str "Validated: " v)) impls)
+              (throw (ex-info "Validation failed: Value must be string" {:key k :value v})))))]
     (let [m1 (assoc validated-map :a "hello")]
       (is (= {:a "Validated: hello"} m1))
-      (is (instance? com.jolygon.poly-map.api-0.impl/PolyMap m1)))
+      (is (instance? mi/PolyMap m1)))
     (is (thrown? :default (assoc validated-map :b 123)))))
 
 (deftest test-override-invoke-variadic
   (let [callable-map
         (poly/assoc-impl
-         (poly/poly-map :base 10)
-         ::pm/invoke-variadic
-         (fn [_this m _impls _metadata & args]
-           (+ (:base m) (apply + args))))]
+          (poly/poly-map :base 10)
+          ::pm/invoke-variadic
+          (fn [_this m _impls _metadata & args]
+            (+ (:base m) (apply + args))))]
     (is (= 10 (callable-map)) "Invoke with 0 args")
     (is (= 15 (callable-map 5)) "Invoke with 1 arg")
     (is (= 16 (callable-map 1 2 3)) "Invoke with multiple args")
@@ -266,25 +266,25 @@
   (let [log (atom [])
         logging-map
         (poly/assoc-impl
-         (poly/poly-map)
-         ::tpm/-assoc!_k_v
-         (fn [this t-m _t-impls _metadata k v]
-           (swap! log conj [:assoc! k v])
-           #_{:clj-kondo/ignore [:unused-value]}
-           (assoc! t-m k v)
-           this)
-         ::tpm/-dissoc!_k
-         (fn [this t-m _t-impls _metadata k]
-           (swap! log conj [:without! k])
-           #_{:clj-kondo/ignore [:unused-value]}
-           (dissoc! t-m k)
-           this))
+          (poly/poly-map)
+          ::tpm/-assoc!_k_v
+          (fn [this t-m _t-impls _metadata k v]
+            (swap! log conj [:assoc! k v])
+            #_{:clj-kondo/ignore [:unused-value]}
+            (assoc! t-m k v)
+            this)
+          ::tpm/-dissoc!_k
+          (fn [this t-m _t-impls _metadata k]
+            (swap! log conj [:without! k])
+            #_{:clj-kondo/ignore [:unused-value]}
+            (dissoc! t-m k)
+            this))
         final-map (persistent!
-                   (-> (transient logging-map)
-                       (assoc! :a 1)
-                       (assoc! :b 2)
-                       (dissoc! :a)
-                       (assoc! :c 3)))]
+                    (-> (transient logging-map)
+                        (assoc! :a 1)
+                        (assoc! :b 2)
+                        (dissoc! :a)
+                        (assoc! :c 3)))]
     (is (= {:b 2 :c 3} final-map) "Final map state is correct")
     (is (= [[:assoc! :a 1]
             [:assoc! :b 2]
@@ -293,10 +293,10 @@
 
 (deftest test-override-toString
   (let [m (poly/assoc-impl
-           (poly/poly-map :a 1 :b 2)
-           ::pm/toString
-           (fn [_this m _impls _metadata]
-             (str "<PolyMap:" (count m) " entries>")))]
+            (poly/poly-map :a 1 :b 2)
+            ::pm/toString
+            (fn [_this m _impls _metadata]
+              (str "<PolyMap:" (count m) " entries>")))]
     (is (= "<PolyMap:2 entries>" (str m)))))
 
 (comment
@@ -322,21 +322,20 @@
 
 (defn -main []
   (println :starting :test)
-  (do
-    (poly-map-build-test)
-    (poly-map-arity-test)
-    (poly-map-assoc-dissoc-test)
-    (poly-map-conj-test)
-    (poly-map-find-test)
-    (poly-map-contains-test)
-    (poly-map-keys-vals-test)
-    (poly-map-get-test)
-    (poly-map-destructure-test)
-    (test-poly-map-impls)
-    (test-impl-api-persistent)
-    (test-override-get-default-value)
-    (test-override-assoc-validation)
-    (test-override-invoke-variadic)
-    (test-override-transient-logging)
-    (test-override-toString))
+  (poly-map-build-test)
+  (poly-map-arity-test)
+  (poly-map-assoc-dissoc-test)
+  (poly-map-conj-test)
+  (poly-map-find-test)
+  (poly-map-contains-test)
+  (poly-map-keys-vals-test)
+  (poly-map-get-test)
+  (poly-map-destructure-test)
+  (test-poly-map-impls)
+  (test-impl-api-persistent)
+  (test-override-get-default-value)
+  (test-override-assoc-validation)
+  (test-override-invoke-variadic)
+  (test-override-transient-logging)
+  (test-override-toString)
   (println :test :complete))
