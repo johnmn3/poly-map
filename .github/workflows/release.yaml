@@ -13,11 +13,11 @@ jobs:
       - uses: ./.github/actions/cache-clojure-deps
         with:
           key-label: 'tests'
+      - name: Set Active Babashka Version using mise
+        run: mise use -g babashka@1.12.197
       - uses: jdx/mise-action@v2
         with:
           install_args: "babashka java clojure"
-      - name: Set Active Babashka Version using mise
-        run: mise use -g babashka@1.3.186
       - name: Run tests
         run: bb test
 
