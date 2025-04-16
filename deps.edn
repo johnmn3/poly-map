@@ -8,7 +8,7 @@
   :build {:deps {io.github.abogoyavlensky/slim {:mvn/version "0.3.2"}
                  slipset/deps-deploy {:mvn/version "0.2.2"}}
           :ns-default slim.lib
-          :exec-args {:version "0.1.5"
+          :exec-args {:version "0.1.6"
                       :lib com.jolygon/poly-map
                       :url "https://github.com/johnmn3/poly-map"
                       :description "map type maps"
