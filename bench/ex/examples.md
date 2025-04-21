@@ -9,8 +9,7 @@ Most examples will require the following namespaces:
 ```clojure
 (ns ex.examples-low-level-md
   (:require
-    [com.jolygon.wrap-map.api-0 :as w
-     :refer [wrap empty-wrap vary with-wrap]]))
+    [com.jolygon.wrap-map :as w :refer [wrap empty-wrap vary]]))
 ```
 
 ## 1. Default Values for Missing Keys
@@ -289,7 +288,7 @@ Most examples will require the following namespaces:
 
 (def read-only-m
   (-> (wrap :a 1)
-      (with-wrap read-only-map-impls)))
+      (vary merge read-only-map-impls)))
 ```
 
 ### Example Usage:

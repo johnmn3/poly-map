@@ -2,6 +2,8 @@
 
 _"map type maps"_
 
+[![Clojars Project](https://img.shields.io/clojars/v/com.jolygon/wrap-map.svg)](https://clojars.org/com.jolygon/wrap-map) [![Deploy Release](https://github.com/johnmn3/wrap-map/actions/workflows/release.yaml/badge.svg)](https://github.com/johnmn3/wrap-map/actions/workflows/release.yaml) [![cljdoc badge](https://cljdoc.org/badge/com.jolygon/wrap-map)](https://cljdoc.org/d/com.jolygon/wrap-map)
+
 `wrap` maps provide a flexible way to create specialized map-like data structures in Clojure and ClojureScript. It allows you to intercept and customize standard map operations like `get`, `assoc`, `dissoc`, function invocation, printing, and more. This enables built-in validation, side effects, lazy loading, default values, case-insensitive keys, and other custom behaviors without needing to reimplement all the underlying map interfaces.
 
 Think of it as adding middleware or aspects directly to your map data structure. It offers two ways to customize behavior:
@@ -120,7 +122,7 @@ Use `w/assoc` to attach behavior handlers using simple keywords. The first argum
 
 (def frozen-headers (w/freeze headers))
 
-(w/assoc frozen-headers :get #(get %1 (.toUpperCase %2) %3))
+(w/assoc frozen-headers :get #(get %1 (.toUpperCase %2)))
 ; Execution error (ExceptionInfo) at com.jolygon.wrap_map.api_0.impl.WrapMap+assoc_k_v|valAt_k/_assoc_impl (impl.clj:797).
 ; Cannot set impls on frozen wrap map
 
@@ -290,7 +292,7 @@ clj -M:benchmark-cljs-node
 
 ### Discussion
 
-Head on over to zulip chat: https://clojurians.zulipchat.com/#narrow/channel/499006-wrap-maps
+Head on over to zulip chat: [![project chat](https://img.shields.io/badge/zulip-join_chat-brightgreen.svg)](https://clojurians.zulipchat.com/#narrow/channel/499006-wrap-maps)
 
 Or add some long form discussoin to the forum post up on Clojureverse: https://clojureverse.org/t/wrap-maps/11338
 

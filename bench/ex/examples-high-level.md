@@ -9,14 +9,14 @@ Most examples will require the following namespaces:
 ```clojure
 (ns ex.examples-high-level-md
   (:require
-    [com.jolygon.wrap-map.api-0 :as w :refer [wrap]]))
+    [com.jolygon.wrap-map :as w :refer [wrap]]))
 ```
 
 ## 1. Default Values for Missing Keys
 
 *Use Case*: You want a map that returns a specific default value (or `nil`) when a requested key is not found, instead of requiring the caller to provide a `nf` argument to `get`.
 
-*How?*: Override `:valAt_k` and `:invoke-variadic`.
+*How?*: Override `:get`.
 
 ```clojure
 (def default-value-map
@@ -83,7 +83,7 @@ Most examples will require the following namespaces:
 
 *Use Case*: Ensure that values associated with specific keys conform to a predefined schema (using `spec` in this example).
 
-*How?*: Override `:assoc_k_v` to perform validation before associating.
+*How?*: Override `:assoc` to perform validation before associating.
 
 ```clojure
 (require '[clojure.spec.alpha :as s])
@@ -123,7 +123,7 @@ Most examples will require the following namespaces:
 
 *Use Case*: Track which keys are being read from the map, perhaps for debugging or analytics.
 
-*How?*: Override `:valAt_k` and `:valAt_k_nf` to log the access.
+*How?*: Override `:get` to log the access.
 
 ```clojure
 (def access-log (atom []))
@@ -153,7 +153,7 @@ Most examples will require the following namespaces:
 
 *Use Case*: Trigger an external action (like notifying a UI component or saving to a DB) whenever the map is modified.
 
-*How?*: Override `:assoc_k_v` and `:without_k`.
+*How?*: Override `:assoc` and `:dissoc`.
 
 ```clojure
 (defn notify-change [change-type k value]
@@ -183,7 +183,7 @@ Most examples will require the following namespaces:
 
 *Use Case*: Define keys that don't store a static value but compute one based on other data in the map when accessed.
 
-*How?*: Override `:valAt_k` (and potentially `:valAt_k_nf`).
+*How?*: Override `:get`.
 
 ```clojure
 (def computed-prop-map
@@ -210,7 +210,7 @@ Most examples will require the following namespaces:
 
 *Use Case*: Defer loading data for certain keys until they are actually requested, perhaps fetching from a database or file.
 
-*How?*: Override `:valAt_k_nf`. If the key isn't present, attempt to load it. This example also updates the map to cache the loaded value.
+*How?*: Override `:get`. If the key isn't present, attempt to load it. This example also updates the map to cache the loaded value.
 
 ```clojure
 (defn simulate-db-fetch [k]
@@ -263,7 +263,7 @@ Most examples will require the following namespaces:
 
 *Use Case*: Use the map itself as a dispatch mechanism, calling different functions based on arguments passed when the map is invoked.
 
-*How?*: Override `:invoke-variadic`.
+*How?*: Override `:invoke`.
 
 ```clojure
 (defn handle-add [x y] (+ x y))
@@ -294,7 +294,7 @@ Most examples will require the following namespaces:
 
 *Use Case*: Keep track of how often keys are accessed.
 
-*How?*: Override `:valAt_k` and `:valAt_k_nf`. Store counts in an atom external to the map.
+*How?*: Override `:get`. Store counts in an atom external to the map.
 
 ```clojure
 (def access-counts (atom {}))
@@ -323,7 +323,7 @@ Most examples will require the following namespaces:
 
 *Use Case*: Control how the map is printed or converted to a string, perhaps hiding sensitive data or providing a summary.
 
-*How?*: Override `:print-method_writer` and `:toString`.
+*How?*: Override `:print`.
 
 ```clojure
 (def sanitizing-string-map

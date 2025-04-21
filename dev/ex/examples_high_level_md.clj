@@ -63,6 +63,12 @@
 
 (dissoc headers "CONTENT-TYPE") ;=> {:other-header 123}
 
+(def frozen-headers (w/freeze headers))
+
+(w/assoc frozen-headers :get #(get %1 (.toUpperCase %2)))
+; Execution error (ExceptionInfo) at com.jolygon.wrap_map.api_0.impl.WrapMap+assoc_k_v|valAt_k/_assoc_impl (impl.clj:797).
+; Cannot set impls on frozen wrap map
+
 ;; ------------------------------------
 
 ;;;;;;;;;;;;;;;;;;;;

@@ -32,7 +32,7 @@ Setup code similar to the Clojure benchmarks is used.
 ```clojure
 (ns ex.cljs-bench-setup ;; Example namespace
   (:require
-   [com.jolygon.wrap-map.api-0 :as w :refer [wrap empty-wrap freeze]]))
+   [com.jolygon.wrap-map :as w :refer [wrap empty-wrap freeze]]))
 
 (do
   ;; baseline
