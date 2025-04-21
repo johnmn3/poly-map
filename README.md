@@ -223,18 +223,6 @@ See [./bench/ex/clj-bench.md](./bench/ex/clj-bench.md) for Clojure benchmark det
 * **Schema Libraries (Malli, Spec)**: Primarily focused on data validation and specification, often used externally to map operations rather than being baked into the map's behavior itself, although they can be integrated using `wrap` handlers (as shown in examples).
 * **Proxy**: Allows dynamic implementation of interfaces, but generally comes with a larger performance overhead than `deftype` or `wrap` map's approach.
 
-### Changelog
-
-#### v0.1.0 (YYYY-MM-DD)
-
-* Major Performance Optimizations:
-  * Implemented specialized internal types (WrapMap+...) to significantly speed up baseline assoc and get operations by reducing runtime dispatch overhead.
-  * Optimized `wrap` constructor, especially when called via apply, bringing performance close to native hash-map.
-  * Improved transient batch assoc! performance to be nearly on par with native transients.
-  * Improved persistent! performance, though it remains an area with overhead compared to native maps.
-* Introduced High-Level API: Added wrap/assoc and wrap/dissoc functions using simple keywords (e.g., :get, :assoc) for easier customization of common behaviors.
-* Added examples-high-level.md (TODO) and updated documentation.
-
 ### Development
 
 Clone the repository and run tests using the Clojure CLI:
