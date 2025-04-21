@@ -35,7 +35,7 @@ Sometimes, you need a map that does *more* than just associate keys with values.
 
 ## Compatibility
 
-Developed and tested with Clojure 1.12.x and ClojureScript 1.12.x.
+Developed and tested with Clojure 1.12.x and ClojureScript 1.11.x.
 
 ## Installation
 
@@ -194,6 +194,32 @@ For finer control, direct access to underlying protocol/interface methods, or to
 ;=> "Map is read-only"
 (try (persistent! (assoc! (transient read-only-m) :c 3)) (catch Exception e (.getMessage e)))
 ;=> "Map is read-only"
+
+;; Example 2 - surgical modifications (here logging) in a functional pipeline
+
+(-> {:a 1}
+    (assoc :b 2)
+    (w/assoc
+      :T_assoc_k_v (fn [_ t-m k v]
+                     (println "[Transient] assoc! key:" k "val:" v)
+                     (assoc! t-m k v)))
+    transient
+    (assoc! :x 100)
+    (assoc! :y 200)
+    persistent!
+    w/unwrap
+    (dissoc :b)
+    (w/assoc
+      :assoc_k_v (fn [{:as e :keys [<-]} m k v]
+                   (println "[Persistent] assoc key:" k "val:" v)
+                   (<- e (assoc m k v)))) ;<- persistent ops require `<- constructor
+    (assoc :z 300)
+    w/unwrap
+    (assoc :done 1))
+; [Transient] assoc! key: :x val: 100
+; [Transient] assoc! key: :y val: 200
+; [Persistent] assoc key: :z val: 300
+{:a 1, :x 100, :y 200, :z 300, :done 1}
 ```
 
 ### Examples

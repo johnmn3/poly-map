@@ -52,12 +52,12 @@ m2 ;=> {:c 3, :b 2, :a 1}
 
 ;; transients
 
-(def m (wrap :a 1))
+(def m1 (wrap :a 1))
 
 ;; Create a transient version
-(def tm (transient m))
+(def tm (transient m1))
 
-;; Perform transient mutations
+1;; Perform transient mutations
 (assoc! tm :b 2)
 (assoc! tm :c 3)
 
@@ -112,10 +112,17 @@ m2 ;=> {:c 3, :b 2, :a 1}
     persistent!
     w/unwrap
     (dissoc :b)
-    (assoc :z 300))
+    (w/assoc
+      :assoc_k_v (fn [{:as e :keys [<-]} m k v]
+                   (println "[Persistent] assoc key:" k "val:" v)
+                   (<- e (assoc m k v))))
+    (assoc :z 300)
+    w/unwrap
+    (assoc :done 1))
 ; [Transient] assoc! key: :x val: 100
 ; [Transient] assoc! key: :y val: 200
-;=> {:a 1, :x 100, :y 200, :z 300}
+; [Persistent] assoc key: :z val: 300
+{:a 1, :x 100, :y 200, :z 300, :done 1}
 
 ;; `{:a 1}` became side-effecting halfway through a pipeline, then back to a normal map, continuing through the pipeline.
 
