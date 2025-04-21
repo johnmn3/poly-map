@@ -167,7 +167,7 @@ For finer control, direct access to underlying protocol/interface methods, or to
 
 3. **Override Function Signatures**: Low-level override functions receive more arguments. They often need to return a variant of `WrapMap` or `TransientWrapMap` using the `<-` constructor function - in the form of: `(<- e m)`.
 
-4. **Providing Low-Level Implementations**: Use `w/assoc-impl`, `w/dissoc-impl`, `w/with-wrap`.
+4. **Providing Low-Level Implementations**: Use `w/vary` or `w/assoc`. `w/assoc` can handle both high level and low level keys.
 
 ```clojure
 ;; Example: Read-Only Map (Requires Low-Level API)
@@ -197,7 +197,7 @@ For finer control, direct access to underlying protocol/interface methods, or to
 
 ;; Example 2 - surgical modifications (here logging) in a functional pipeline
 
-(-> {:a 1}
+(-> {:a 1}         ;<- you don't have to start with a wrapped map. `w/assoc` and friends auto-wrap
     (assoc :b 2)
     (w/assoc
       :T_assoc_k_v (fn [_ t-m k v]
