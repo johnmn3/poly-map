@@ -197,7 +197,7 @@ For finer control, direct access to underlying protocol/interface methods, or to
 
 ;; Example 2 - surgical modifications (here logging) in a functional pipeline
 
-(-> {:a 1}         ;<- you don't have to start with a wrapped map. `w/assoc` and friends auto-wrap
+(-> {:a 1}         ;<- `w/assoc` and friends auto-wrap - no `wrap` call necessary
     (assoc :b 2)
     (w/assoc
       :T_assoc_k_v (fn [_ t-m k v]
