@@ -104,7 +104,7 @@ Use `w/assoc` to attach behavior handlers using simple keywords. The first argum
 
 (def case-insensitive-map
   (-> {:other :keys :in :a :regular :map}
-      (w/assoc
+      (w/assoc ;<- `w/assoc` and friends auto-`wrap` their map arg when needed
        :assoc     (fn [m k v]      (assoc m (normalize-key k) v))
        :dissoc    (fn [m k]        (dissoc m (normalize-key k)))
        :contains? (fn [m k]        (contains? m (normalize-key k)))
@@ -197,7 +197,7 @@ For finer control, direct access to underlying protocol/interface methods, or to
 
 ;; Example 2 - surgical modifications (here logging) in a functional pipeline
 
-(-> {:a 1}         ;<- `w/assoc` and friends auto-wrap - no `wrap` call necessary
+(-> {:a 1}
     (assoc :b 2)
     (w/assoc
       :T_assoc_k_v (fn [_ t-m k v]
