@@ -165,7 +165,7 @@ For finer control, direct access to underlying protocol/interface methods, or to
     - For persistent map operations (e.g., `:valAt_k_nf`)
     - For transient map operations (e.g., `:T_assoc_k_v`)
 
-3. **Override Function Signatures**: Low-level override functions receive more arguments. They often need to return a variant of `WrapMap` or `TransientWrapMap` using the `<-` constructor function - in the form of: `(<- e m)`.
+3. **Override Function Signatures**: Low-level override functions receive more arguments. They often need to return a variant of `WrapMap`using the `<-` constructor function - in the form of: `(<- e m)`. `TransientWrapMap`, on the other hand, handle's returning it's own `this` on mutating operations - all you have to do is return the mutated transient map (`t_m`).
 
 4. **Providing Low-Level Implementations**: Use `w/vary` or `w/assoc`. `w/assoc` can handle both high level and low level keys.
 
