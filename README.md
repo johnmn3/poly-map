@@ -115,6 +115,15 @@ Use `w/assoc` to attach behavior handlers using simple keywords. The first argum
 (get headers "content-type") ;=> "application/json"
 (contains? headers "CONTENT-TYPE") ;=> true
 (dissoc headers "Content-type") ;=> {:other :keys :in :a :regular :map}
+
+;; Want to freeze a wrap map to its current implementation?
+
+(def frozen-headers (w/freeze headers))
+
+(w/assoc frozen-headers :get #(get %1 (.toUpperCase %2) %3))
+; Execution error (ExceptionInfo) at com.jolygon.wrap_map.api_0.impl.WrapMap+assoc_k_v|valAt_k/_assoc_impl (impl.clj:797).
+; Cannot set impls on frozen wrap map
+
 ```
 
 ## Core Concept: High-Level Behaviors
