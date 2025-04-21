@@ -279,6 +279,12 @@ clj -M:benchmark-clj
 clj -M:benchmark-cljs-node
 ```
 
+### Discussion
+
+Head on over to zulip chat: https://clojurians.zulipchat.com/#narrow/channel/499006-wrap-maps
+
+Or add some long form discussoin to the forum post up on Clojureverse: https://clojureverse.org/t/wrap-maps/11338
+
 ### License
 
 Copyright © 2025 Jolygon
