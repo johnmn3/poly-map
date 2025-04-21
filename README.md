@@ -66,10 +66,10 @@ You create a `wrap` map just like a regular map:
 (get m1 :c 404)   ;=> 404
 (:b m1)           ;=> 2
 (count m1)        ;=> 2
-(assoc m1 :c 3)   ;=> {:a 1, :b 2, :c 3} ;; Note: Uses clojure.core/assoc
-(dissoc m1 :a)    ;=> {:b 2} ;; Note: Uses clojure.core/dissoc
-(keys m1)         ;=> (:a :b) ;; Order may vary in CLJS
-(vals m1)         ;=> (1 2)  ;; Order may vary in CLJS
+(assoc m1 :c 3)   ;=> {:a 1, :b 2, :c 3}
+(dissoc m1 :a)    ;=> {:b 2}
+(keys m1)         ;=> (:a :b)
+(vals m1)         ;=> (1 2)
 
 ;; It's persistent:
 (def m2 (assoc m1 :c 3))
