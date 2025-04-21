@@ -162,8 +162,14 @@ For finer control, direct access to underlying protocol/interface methods, or to
     - `m`: The underlying map holding the actual data.
 
 2. **Implementation Keys**: Override functions are associated with namespace _unqualified_ keyword keys.
-    - For persistent map operations (e.g., `:valAt_k_nf`)
-    - For transient map operations (e.g., `:T_assoc_k_v`)
+    - For persistent map operations in Clojurescript:
+        > :toString :-conj_v :-empty :-without_k :-assoc_k_v :-contains-key?_k :-find_k :-seq :-meta :withMeta_new-meta :-count :-lookup_k :-lookup_k_nf :kv-reduce_f_init  :invoke :invoke-variadic :-pr-writer_writer_opts
+    - For transient map operations in Clojurescript:
+        > :T_-conj! :T_-assoc!_k_v :T_-dissoc!_k :T_-lookup_k :T_-lookup_k_nf :T_-count
+    - For persistent map operations in Clojure:
+        > :toString :containsKey_k :entryAt_k :assoc_k_v :kvreduce_f_init :valAt_k :valAt_k_nf :keyIterator :valIterator :count :empty :cons_v :assocEx_k_v :without_k :seq :iterator :invoke :invoke-variadic :asTransient :withMeta_meta :meta :coll-reduce_afn :coll-reduce_afn_init :kv-reduce_afn_init :size :isEmpty :containsValue_v :get_k :get_k_nf :entrySet :keySet :values :put :remove :putAll :clear :print-method_writer
+    - For transient map operations in Clojure:
+        > :T_conj_v :T_assoc_k_v :T_without_k :T_valAt_k :T_valAt_k_nf :T_count 
 
 3. **Override Function Signatures**: Low-level override functions receive more arguments. They often need to return a variant of `WrapMap`using the `<-` constructor function - in the form of: `(<- e m)`. `TransientWrapMap`, on the other hand, handle's returning it's own `this` on mutating operations - all you have to do is return the mutated transient map (`t_m`).
 
