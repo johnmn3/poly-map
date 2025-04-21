@@ -200,8 +200,8 @@ For finer control, direct access to underlying protocol/interface methods, or to
 
 For more detailed examples covering both APIs, see:
 
-- [examples-high-level.md](./bench/ex/examples-high-level.md) (todo) (using `wrap/assoc` with keywords)
-- [examples.md](./bench/ex/examples.md) (using `wrap/assoc-impl` with `:...` keys)
+- [High level examples](./bench/ex/examples-high-level.md) (using `w/assoc` with keywords)
+- [Low level examples](./bench/ex/examples.md) (using `w/vary`, etc.)
 
 ### Performance
 
