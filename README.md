@@ -237,12 +237,12 @@ clj -M:test-cljs
 
 To run benchmarks:
 
-# Run Clojure benchmarks
+### Run Clojure benchmarks
 ```bash
 clj -M:benchmark-clj
 ```
 
-# Run ClojureScript benchmarks
+### Run ClojureScript benchmarks
 ```bash
 clj -M:benchmark-cljs-node
 ```
