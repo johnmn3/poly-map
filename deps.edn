@@ -1,6 +1,6 @@
 {:paths ["src"]
  :deps {org.clojure/clojure {:mvn/version "1.12.0"}
-        org.clojure/clojurescript {:mvn/version "1.12.19"}}
+        org.clojure/clojurescript {:mvn/version "1.11.132"}}
  :aliases
  {:dev {:extra-paths ["dev"]}
   :outdated {:extra-deps {com.github.liquidz/antq ^:antq/exclude {:mvn/version "2.11.1276"}}
