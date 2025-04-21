@@ -171,7 +171,7 @@ For finer control, direct access to underlying protocol/interface methods, or to
     - For transient map operations in Clojure:
         > :T_conj_v :T_assoc_k_v :T_without_k :T_valAt_k :T_valAt_k_nf :T_count 
 
-3. **Override Function Signatures**: Low-level override functions receive more arguments. They often need to return a variant of `WrapMap`using the `<-` constructor function - in the form of: `(<- e m)`. `TransientWrapMap`, on the other hand, handle's returning it's own `this` on mutating operations - all you have to do is return the mutated transient map (`t_m`).
+3. **Override Function Signatures**: Low-level override functions receive more arguments. They often need to return a variant of `WrapMap`using the `<-` constructor function - in the form of: `(<- e m)`. `TransientWrapMap`, on the other hand, handle's returning it's own `this` on mutating operations - all you have to do is perform the mutating operations on the transient map (`t_m`) and it will be returned. You cannot make changes to the implementations environment map `e` while in transient mode. You are only provided `e` for informational access to the implementations and metadata, for meta programming purposes.
 
 4. **Providing Low-Level Implementations**: Use `w/vary` or `w/assoc`. `w/assoc` can handle both high level and low level keys.
 
