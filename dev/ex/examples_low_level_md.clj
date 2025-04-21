@@ -1,9 +1,7 @@
 (ns ex.examples-low-level-md
   (:require
-    [com.jolygon.poly-map.api-0 :as poly
-     :refer [poly-map empty-poly-map assoc-impl set-impls make-poly-map]]
-    [com.jolygon.poly-map.api-0.keys :as pm]
-    [com.jolygon.poly-map.api-0.trans.keys :as tpm]))
+    [com.jolygon.wrap-map :as w
+     :refer [wrap empty-wrap vary]]))
 
 ;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -12,25 +10,28 @@
 ;;;;;;;;;;;;;;;;;;;;
 
 (def default-value-map
-  (-> empty-poly-map
-      (assoc-impl
-        ::pm/valAt_k
-        (fn [_this m _impls _metadata k]
-          (get m k :not-available))
-        ::pm/invoke-variadic
-        (fn [_this m _impls _metadata k & [not-available]]
-          (get m k (or not-available :not-available))))))
+  (-> empty-wrap
+      (vary assoc
+                 :valAt_k (fn [_ m k] (get m k :not-available))
+                 :valAt_k_nf (fn [_ m k & [not-available]] (get m k (or not-available :not-available)))
+                 :invoke-variadic (fn [_ m k & [not-available]]
+                                    (get m k (or not-available :not-available))))))
 
 (def m1 (assoc default-value-map :a 1))
 
 ;; ### Example:
 
 (get m1 :a)   ;=> 1
-(m1 :a)       ;=> 1 (Arity-1 invoke defaults to get_k override)
+(m1 :a)       ;=> 1 (Arity-1 invoke defaults to get override)
+(:a m1)       ;=> 1
 
 (get m1 :b)   ;=> :not-available
 (m1 :b)       ;=> :not-available
-(m1 :b :soon) ;=> :soon
+(:b m1)       ;=> :not-available
+
+(get m1 :b :soon) ;=> :soon
+(m1 :b :soon)     ;=> :soon
+(:b m1 :soon)     ;=> :soon
 
 ;; ------------------------------------
 
@@ -44,23 +45,15 @@
   (if (string? k) (.toLowerCase ^String k) k))
 
 (def case-insensitive-map
-  (-> empty-poly-map
-      (assoc-impl
-        ::pm/assoc_k_v
-        (fn [_this m impls metadata k v]
-          (make-poly-map (assoc m (normalize-key k) v) impls metadata))
-        ::pm/valAt_k
-        (fn [_this m _impls _metadata k]
-          (get m (normalize-key k)))
-        ::pm/valAt_k_nf
-        (fn [_this m _impls _metadata k nf]
-          (get m (normalize-key k) nf))
-        ::pm/containsKey_k
-        (fn [_this m _impls _metadata k]
-          (contains? m (normalize-key k)))
-        ::pm/without_k
-        (fn [_this m impls metadata k]
-          (make-poly-map (dissoc m (normalize-key k)) impls metadata)))))
+  (-> {}
+      (vary merge
+                 {:valAt_k (fn [_ m k] (get m (normalize-key k)))
+                  :valAt_k_nf (fn [_ m k nf] (get m (normalize-key k) nf))
+                  :containsKey_k (fn [_ m k] (contains? m (normalize-key k)))
+                  :assoc_k_v (fn [{:as e :keys [<-]} m k v]
+                               (<- e (assoc m (normalize-key k) v)))
+                  :without_k (fn [{:as e :keys [<-]} m k]
+                               (<- e (dissoc m (normalize-key k))))})))
 
 (def headers
   (-> case-insensitive-map
@@ -91,15 +84,14 @@
 (s/def ::age pos-int?)
 
 (def schema-map
-  (-> empty-poly-map
-      (assoc-impl
-        ::pm/assoc_k_v
-        (fn [_this m impls metadata k v]
-          (let [expected-type (case k :name ::name :age ::age :any)]
-            (if (or (= expected-type :any) (s/valid? expected-type v))
-              (make-poly-map (assoc m k v) impls metadata)
-              (throw (ex-info "Schema validation failed"
-                              {:key k :value v :expected (s/describe expected-type)}))))))))
+  (-> empty-wrap
+      (vary assoc
+                 :assoc_k_v (fn [{:as e :keys [<-]} m k v]
+                              (let [expected-type (case k :name ::name :age ::age :any)]
+                                (if (or (= expected-type :any) (s/valid? expected-type v))
+                                  (<- e (assoc m k v))
+                                  (throw (ex-info "Schema validation failed"
+                                                  {:key k :value v :expected (s/describe expected-type)}))))))))
 
 ;; ### Example:
 
@@ -127,16 +119,14 @@
 (def access-log (atom []))
 
 (def logging-read-map
-  (-> empty-poly-map
-      (assoc-impl
-        ::pm/valAt_k
-        (fn [_this m _impls _metadata k]
-          (swap! access-log conj [:get k])
-          (get m k))
-        ::pm/valAt_k_nf
-        (fn [_this m _impls _metadata k nf]
-          (swap! access-log conj [:get k nf])
-          (get m k nf)))))
+  (-> {}
+      (vary assoc
+                 :valAt_k (fn [_ m k]
+                            (swap! access-log conj [:get k])
+                            (get m k))
+                 :valAt_k_nf (fn [_ m k nf]
+                               (swap! access-log conj [:get k nf])
+                               (get m k nf)))))
 
 (def mlog (assoc logging-read-map :a 1))
 
@@ -146,8 +136,7 @@
 (get mlog :a)      ;=> 1
 (get mlog :b)      ;=> nil (Logged as [:get :b])
 (get mlog :c 404)  ;=> 404
-@access-log
-;=> [[:get :a] [:get :b] [:get :c 404]]
+@access-log        ;=> [[:get :a] [:get :b] [:get :c 404]]
 
 ;; ------------------------------------
 
@@ -157,24 +146,18 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;
 
-(defn notify-change [change-type key value]
-  (println "[Notification] Type:" change-type ", Key:" key ", Value:" value))
+(defn notify-change [change-type k value]
+  (println "[Notification] Type:" change-type ", Key:" k ", Value:" value))
 
 (def notifying-map
-  (-> empty-poly-map
-      (assoc-impl
-        ::pm/assoc_k_v
-        (fn assoc_k_v [_this m impls metadata k v]
-          (notify-change :assoc k v)
-          (make-poly-map (assoc m k v)
-                         (assoc impls ::pm/assoc_k_v assoc_k_v)
-                         metadata))
-        ::pm/without_k
-        (fn dissoc_k [_this m impls metadata k]
-          (notify-change :dissoc k nil)
-          (make-poly-map (dissoc m k)
-                         (assoc impls ::pm/without_k dissoc_k)
-                         metadata)))))
+  (-> {}
+      (vary assoc
+                 :assoc_k_v (fn [{:as e :keys [<-]} m k v]
+                              (notify-change :assoc k v)
+                              (<- e (assoc m k v)))
+                 :without_k (fn [{:as e :keys [<-]} m k]
+                              (notify-change :dissoc k nil)
+                              (<- e (dissoc m k))))))
 
 ;; ### Example:
 
@@ -192,20 +175,16 @@
 ;;;;;;;;;;;;;;;;;;;;
 
 (def computed-prop-map
-  (-> (poly-map :first-name "Jane" :last-name "Doe")
-      (assoc-impl
-        ::pm/valAt_k
-        (fn [_this m _impls _metadata k]
-          (if (= k :full-name)
-           ;; Compute m for :full-name
-            (str (:first-name m) " " (:last-name m))
-           ;; Otherwise, standard lookup
-            (get m k)))
-        ::pm/valAt_k_nf
-        (fn [this m impls metadata k nf]
-          (if (= k :full-name)
-            ((::pm/valAt_k impls) this m impls metadata k)
-            (get m k nf))))))
+  (-> (wrap :first-name "Jane" :last-name "Doe")
+      (vary assoc
+                 :valAt_k (fn [_ m k]
+                            (if (= k :full-name)
+                              (str (:first-name m) " " (:last-name m))
+                              (get m k)))
+                 :valAt_k_nf (fn [{:as e :keys [valAt_k]} m k nf]
+                               (if (= k :full-name)
+                                 (valAt_k e m k)   ;; <- Delegate to valAt_k
+                                 (get m k nf))))))
 
 ;; ### Example:
 
@@ -228,26 +207,19 @@
   (if (= k :user-prefs) {:theme "dark" :lang "en"} nil))
 
 (def lazy-loading-map
-  (-> empty-poly-map
-      (assoc-impl
-        ::pm/valAt_k_nf
-        (fn [_this m _impls _metadata k nf]
-          (let [val (get m k ::nf)]
-            (if (= val ::nf)
-              (if-let [loaded-val (simulate-db-fetch k)]
-               ;; Found externally: assoc into a new map and return the value
-               ;; This effectively caches the result.
-                (do
-                  (println "[Cache] Storing loaded value for key:" k)
-                 ; To cache: override assoc_k_v as well.
-                  loaded-val) ;; Simple version: just return loaded, no cache update
-               ;; Not found externally either
-                nf)
-             ;; Found locally
-              val)))
-        ::pm/valAt_k
-        (fn [this m impls metadata k]
-          ((::pm/valAt_k_nf impls) this m impls metadata k ::nf))))) ; Delegate to above
+  (-> {}
+      (vary assoc
+                 :valAt_k_nf (fn [_ m k nf]
+                               (let [v (get m k ::nf)]
+                                 (if (= v ::nf)
+                                   (if-let [loaded-val (simulate-db-fetch k)]
+                                     (do
+                                       (println "[Cache] Storing loaded value for key:" k)
+                                       loaded-val) ;; Simple version: just return loaded, no cache update
+                                     nf)
+                                   v)))
+                 :valAt_k (fn [{:as e :keys [valAt_k_nf]} m k]
+                            (valAt_k_nf e m k ::nf))))) ; Delegate to above
 
 ;; ### Example:
 
@@ -278,26 +250,28 @@
 ;;;;;;;;;;;;;;;;;;;;
 
 (defn read-only-error [& _]
-  (throw (UnsupportedOperationException. "Map is read-only")))
+  (throw (UnsupportedOperationException. "Wrap map is read-only")))
 
 (def read-only-map-impls
-  {::pm/assoc_k_v read-only-error
-   ::pm/dissoc_k read-only-error
-   ::pm/without_k read-only-error
-   ::pm/cons_o read-only-error
-   ::pm/assocEx_k_v read-only-error
+  {:assoc_k_v read-only-error
+   :without_k read-only-error
+   :assocEx_k_v read-only-error
    ;; Override transient mutations too if you want `(transient read-only-map)` to fail
-   ::tpm/assoc_k_v read-only-error
-   ::tpm/without_k read-only-error
-   ::tpm/conj_entry read-only-error})
+   :T_assoc_k_v read-only-error
+   :T_without_k read-only-error
+   :T_conj_v read-only-error})
 
 (def read-only-m
-  (-> (poly-map :a 1)
-      (set-impls read-only-map-impls)))
+  (-> (wrap :a 1)
+      (vary merge read-only-map-impls)))
 ;; Or, to add to existing impls:
 ;; (def read-only-m
 ;;   (->> read-only-map-impls
-;;        (apply assoc-impl (poly-map :a 1))))
+;;        (apply w/assoc (wrap :a 1))))
+;; Or, using vary:
+;; (def read-only-m
+;;   (->> read-only-map-impls
+;;        (vary merge (wrap :a 1))))
 
 ;; ### Example:
 
@@ -326,15 +300,14 @@
 (defn handle-multiply [x y] (* x y))
 
 (def dispatching-map
-  (-> empty-poly-map
+  (-> {}
       (assoc :add-fn handle-add :mul-fn handle-multiply)
-      (assoc-impl
-        ::pm/invoke-variadic
-        (fn [_this m _impls _metadata operation & args]
-          (case operation
-            :add (apply (:add-fn m) args)
-            :multiply (apply (:mul-fn m) args)
-            (throw (ex-info "Unknown operation" {:operation operation})))))))
+      (w/assoc
+        :invoke-variadic (fn [_ m operation & args]
+                           (case operation
+                             :add (apply (:add-fn m) args)
+                             :multiply (apply (:mul-fn m) args)
+                             (throw (ex-info "Unknown operation" {:operation operation})))))))
 
 ;; ### Example:
 
@@ -355,16 +328,14 @@
 (def access-counts (atom {}))
 
 (def counting-map
-  (-> (poly-map :a 1 :b 2)
-      (assoc-impl
-        ::pm/valAt_k
-        (fn [_this m _impls _metadata k]
-          (swap! access-counts update k (fnil inc 0)) ; Increment count
-          (get m k))
-        ::pm/valAt_k_nf
-        (fn [_this m _impls _metadata k nf]
-          (swap! access-counts update k (fnil inc 0)) ; Increment count
-          (get m k nf)))))
+  (-> (wrap :a 1 :b 2)
+      (w/assoc
+        :valAt_k (fn [_ m k]
+                   (swap! access-counts update k (fnil inc 0)) ; Increment count
+                   (get m k))
+        :valAt_k_nf (fn [_ m k nf]
+                      (swap! access-counts update k (fnil inc 0)) ; Increment count
+                      (get m k nf)))))
 
 ;; ### Example:
 
@@ -384,33 +355,30 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;
 
-(def transient-validating-map
-  (-> empty-poly-map
-      (assoc-impl
-        ::tpm/assoc_k_v
-        ;; Note: Needs access to the TransientPolyMap instance (`this`) to return it
-        (fn [_this t-m impls metadata k v]
-          (if (number? v)
-            (poly/make-transient-poly-map (java.util.concurrent.atomic.AtomicBoolean. true)
-                                          (assoc! t-m k v)
-                                          impls
-                                          metadata)
-            (throw (ex-info "Transient validation failed: Value must be number" {:key k :value v})))))
-      transient))
+(def transiently-validating-map
+  (-> empty-wrap
+      (w/assoc
+        :T_assoc_k_v (fn [_ t-m k v]
+                       (if (number? v)
+                         (assoc! t-m k v)
+                         (throw (ex-info "Transient validation failed: Value must be number" {:key k :value v})))))))
 
 ;; ### Example:
 
 ;; Successful batch update
 (persistent!
- (-> transient-validating-map
+ (-> transiently-validating-map
+     transient
      (assoc! :x 10)
      (assoc! :y 20)))
 ;=> {:x 10, :y 20}
 
 ;; Failing batch update (redefine transient-validating-map above first)
+;;   (re-evaluate the transient-validating-map definition above)
 (try
   (persistent!
-   (-> transient-validating-map
+   (-> transiently-validating-map
+       transient
        (assoc! :x 10)
        (assoc! :y "not a number"))) ; This will throw
   (catch Exception e (ex-data e)))
@@ -425,17 +393,14 @@
 ;;;;;;;;;;;;;;;;;;;;
 
 (def sanitizing-string-map
-  (-> (poly-map :user "secret-user" :id 123 :data [1 2 3])
-      (assoc-impl
-        ::pm/print-method_writer
-        (fn [_this m _impls _metadata w]
-          (doto w
-            (.write "<SecureMapData id=")
-            (.write (str (:id m)))
-            (.write ">")))
-        ::pm/toString
-        (fn [_this m _impls _metadata]
-          (str "<SecureMapData id=" (:id m) ">")))))
+  (-> (wrap :user "secret-user" :id 123 :data [1 2 3])
+      (vary assoc
+                 :print-method_writer (fn [_ m w]
+                                        (doto w
+                                          (.write "<SecureMapData id=")
+                                          (.write (str (:id m)))
+                                          (.write ">")))
+                 :toString (fn [_ m] (str "<SecureMapData id=" (:id m) ">")))))
 
 ;; ### Example:
 

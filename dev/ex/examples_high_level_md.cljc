@@ -1,6 +1,7 @@
 (ns ex.examples-high-level-md
   (:require
-    [com.jolygon.wrap-map :as w :refer [wrap]]))
+    [clojure.spec.alpha :as s]
+    [com.jolygon.wrap-map :as w]))
 
 ;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -75,6 +76,7 @@
 
 (s/def ::name string?)
 (s/def ::age pos-int?)
+#_(s/def ::user (s/keys :req-un [::name ::age]))
 
 (def schema-map
   (-> {}
@@ -93,12 +95,12 @@
 
 (try
   (assoc user :age -5)
-  (catch Exception e (ex-data e)))
+  (catch #?(:cljs :default :clj Exception) e (ex-data e)))
 ;=> {:key :age, :value -5, :expected pos-int?}
 
 (try
   (assoc user :name 123)
-  (catch Exception e (ex-data e)))
+  (catch #?(:cljs :default :clj Exception) e (ex-data e)))
 ;=> {:key :name, :value 123, :expected string?}
 
 ;; ------------------------------------
@@ -113,10 +115,9 @@
 
 (def logging-read-map
   (-> {}
-      (w/assoc
-        :get (fn [m k & [nf]]
-               (swap! access-log conj (if nf [:get k nf] [:get k]))
-               (get m k nf)))))
+      (w/assoc :get (fn [m k & [nf]]
+                      (swap! access-log conj (if nf [:get k nf] [:get k]))
+                      (get m k nf)))))
 
 (def mlog (assoc logging-read-map :a 1))
 
@@ -169,13 +170,12 @@
 
 (def computed-prop-map
   (-> {:first-name "Jane" :last-name "Doe"}
-      (w/assoc
-        :get (fn [m k & [nf]]
-               (if (= k :full-name)
-                 ;; Compute value for :full-name
-                 (str (:first-name m) " " (:last-name m))
-                 ;; Otherwise, standard lookup
-                 (get m k nf))))))
+      (w/assoc :get (fn [m k & [nf]]
+                      (if (= k :full-name)
+                         ;; Compute value for :full-name
+                        (str (:first-name m) " " (:last-name m))
+                         ;; Otherwise, standard lookup
+                        (get m k nf))))))
 
 ;; ### Example:
 
@@ -194,26 +194,25 @@
 
 (defn simulate-db-fetch [k]
   (println "[DB] Fetching data for key:" k)
-  (Thread/sleep 50) ; Simulate delay
+  ;; (Thread/sleep 50) ; Simulate delay ;; not in CLJS
   (if (= k :user-prefs) {:theme "dark" :lang "en"} nil))
 
 (def lazy-loading-map
   (-> {}
-      (w/assoc
-        :get (fn [m k & [nf]]
-               (let [v (get m k ::nf)]
-                 (if (= v ::nf)
-                   ;; Not found locally, try loading
-                   (if-let [loaded-val (simulate-db-fetch k)]
-                     ;; Found externally: assoc into a new map and return the value
-                     ;; This effectively caches the result.
-                     (do
-                       (println "[Cache] Storing loaded value for key:" k)
-                       loaded-val) ;; Simple version: just return loaded, no cache update
-                     ;; Not found externally either
-                     (or nf ::nf))
-                   ;; Found locally
-                   v))))))
+      (w/assoc :get (fn [m k & [nf]]
+                      (let [v (get m k ::nf)]
+                        (if (= v ::nf)
+                          ;; Not found locally, try loading
+                          (if-let [loaded-val (simulate-db-fetch k)]
+                            ;; Found externally: assoc into a new map and return the value
+                            ;; This effectively caches the result.
+                            (do
+                              (println "[Cache] Storing loaded value for key:" k)
+                              loaded-val) ;; Simple version: just return loaded, no cache update
+                            ;; Not found externally either
+                            (or nf ::nf))
+                          ;; Found locally
+                          v))))))
 
 ;; ### Example:
 
@@ -247,21 +246,19 @@
 (defn handle-multiply [x y] (* x y))
 
 (def dispatching-map
-  (-> {}
-      (assoc :add-fn handle-add :mul-fn handle-multiply)
-      (w/assoc
-        :invoke (fn [m operation & args]
-                  (case operation
-                    :add (apply (:add-fn m) args)
-                    :multiply (apply (:mul-fn m) args)
-                    (throw (ex-info "Unknown operation" {:operation operation})))))))
+  (-> {:add-fn handle-add :mul-fn handle-multiply}
+      (w/assoc :invoke (fn [m operation & args]
+                         (case operation
+                           :add (apply (:add-fn m) args)
+                           :multiply (apply (:mul-fn m) args)
+                           (throw (ex-info "Unknown operation" {:operation operation})))))))
 
 ;; ### Example:
 
 (dispatching-map :add 10 5) ;=> 15
 (dispatching-map :multiply 10 5) ;=> 50
 
-(try (dispatching-map :subtract 10 5) (catch Exception e (ex-data e)))
+(try (dispatching-map :subtract 10 5) (catch #?(:cljs :default :clj Exception) e (ex-data e)))
 ;=> {:operation :subtract}
 
 ;; ------------------------------------
@@ -275,11 +272,10 @@
 (def access-counts (atom {}))
 
 (def counting-map
-  (-> (wrap :a 1 :b 2)
-      (w/assoc
-        :get (fn [m k & [nf]]
-               (swap! access-counts update k (fnil inc 0))
-               (get m k nf)))))
+  (-> {:a 1 :b 2}
+      (w/assoc :get (fn [m k & [nf]]
+                      (swap! access-counts update k (fnil inc 0))
+                      (get m k nf)))))
 
 ;; ### Example:
 
@@ -300,7 +296,7 @@
 ;;;;;;;;;;;;;;;;;;;;
 
 (def sanitizing-string-map
-  (-> (wrap :user "secret-user" :id 123 :data [1 2 3])
+  (-> {:user "secret-user" :id 123 :data [1 2 3]}
       (w/assoc :print #(str "<SecureMapData id=" (:id %) ">"))))
 
 ;; ### Example:

@@ -14,7 +14,7 @@
   "Run all tests."
   []
   (reset)
-  (test/run-all-tests #"poly-map.*-test"))
+  (test/run-all-tests #"wrap-map.*-test"))
 
 (comment
 

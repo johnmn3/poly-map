@@ -1,13 +1,13 @@
-# poly-map
+# `wrap` map
 
 _"map type maps"_
 
-`poly-map` provides a highly flexible way to create specialized map-like data structures in Clojure and ClojureScript. It allows you to intercept and customize standard map operations like `get`, `assoc`, `dissoc`, function invocation, printing, and more. This enables built-in validation, side effects, lazy loading, default values, case-insensitive keys, and other custom behaviors without needing to reimplement all the underlying map interfaces.
+`wrap` maps provide a flexible way to create specialized map-like data structures in Clojure and ClojureScript. It allows you to intercept and customize standard map operations like `get`, `assoc`, `dissoc`, function invocation, printing, and more. This enables built-in validation, side effects, lazy loading, default values, case-insensitive keys, and other custom behaviors without needing to reimplement all the underlying map interfaces.
 
 Think of it as adding middleware or aspects directly to your map data structure. It offers two ways to customize behavior:
 
 1.  **High-Level API:** The casual and easy way. Uses simple keywords (e.g., `:get`, `:assoc`) to attach handlers for common map operations. Easier to use for most scenarios in applications or application specific data wrangling.
-2.  **Low-Level API:** Provides fine-grained control by allowing overrides for specific underlying protocol/interface methods using namespaced keywords (e.g., `::pm/valAt_k_nf`, `::tpm/assoc_k_v`). Useful for advanced cases or overriding methods not exposed by the high-level API. Prefer the low-level API when building libraries on top of poly-maps. API versions are guaranteed remain stable.
+2.  **Low-Level API:** Provides fine-grained control by allowing overrides for specific underlying protocol/interface methods using namespaced keywords (e.g., `:valAt_k_nf`, `:T_assoc_k_v`). Useful for advanced cases or overriding methods not exposed by the high-level API. Prefer the low-level API when building libraries on top of `wrap` maps. Low level API versions are guaranteed remain stable.
 
 ## Motivation
 
@@ -22,16 +22,15 @@ Sometimes, you need a map that does *more* than just associate keys with values.
 * Make the map itself callable (`IFn`) to perform a specific action based on its content.
 * Create read-only views of map data (using the low-level API).
 
-`poly-map` provides a structured and composable way to achieve these behaviors by wrapping a standard Clojure(Script) map and delegating operations through customizable handlers.
+`wrap` maps provide a structured and composable way to achieve these behaviors by wrapping a standard Clojure(Script) map and delegating operations through customizable handlers.
 
 ## Features
 
 * **Behavioral Customization:** Override standard map operations via high-level keywords (`:get`, `:assoc`, `:dissoc`, etc.) or low-level method keys.
-* **Function Call Override:** Make map instances callable with custom logic using the `:invoke` high-level keyword or low-level `::pm/invoke`.
+* **Function Call Override:** Make map instances callable with custom logic using the `:invoke` high-level keyword or low-level `:invoke`.
 * **Custom Printing:** Control how the map is represented as a string using the `:print` high-level keyword or low-level keys.
-* **Transient Support:** Efficient batch updates using transients, with support for overriding transient-specific operations via low-level keys (`::tpm/...`).
+* **Transient Support:** Efficient batch updates using transients, with support for overriding transient-specific operations via low-level keys.
 * **Metadata Preservation:** Correctly handles metadata (`meta`, `with-meta`).
-* **Extensible:** Add arbitrary helper functions or data to the low-level impls map alongside overrides.
 * **Clojure & ClojureScript:** Works consistently across both platforms.
 
 ## Compatibility
@@ -45,21 +44,21 @@ Add the following dependency:
 **deps.edn:**
 
 ```clojure
-com.jolygon/poly-map {:mvn/version "0.1.7"}
+com.jolygon/wrap-map {:mvn/version "0.1.8"}
 ```
 
 ## Basic Usage (High-Level API)
 
-Require the main API namespace, aliased as `poly`.
+Require the main API namespace, aliased as `w`.
 
 ```clojure
-(require '[com.jolygon.poly-map.api-0 :as poly :refer [poly-map empty-poly-map]])
+(require '[com.jolygon.wrap-map :as w :refer [wrap]])
 ```
 
-Create a poly-map just like a regular map:
+You create a `wrap` map just like a regular map:
 
 ```clojure
-(def m1 (poly-map :a 1 :b 2))
+(def m1 (wrap :a 1 :b 2))
 ;=> {:a 1, :b 2}
 
 ;; It behaves like a standard Clojure(Script) map by default:
@@ -84,13 +83,13 @@ m2 ;=> {:a 1, :b 2, :c 3}
 
 ### Customizing Behavior (High-Level API):
 
-Use `poly/assoc` to attach behavior handlers using simple keywords. The first argument is the poly-map, followed by keyword/handler pairs.
+Use `w/assoc` to attach behavior handlers using simple keywords. The first argument is a `wrap` map (or just a map), followed by keyword/handler pairs.
 
 ```clojure
 (def default-value-map
-  (-> empty-poly-map
-      (poly/assoc :get (fn [m k & [nf]]
-                         (get m k (or nf :not-available))))))
+  (-> (wrap :c 3)
+      (w/assoc :get (fn [m k & [nf]]
+                      (get m k (or nf :not-available))))))
 
 (def m-with-default (assoc default-value-map :a 1))
 
@@ -104,8 +103,8 @@ Use `poly/assoc` to attach behavior handlers using simple keywords. The first ar
   (if (string? k) (.toLowerCase ^String k) k))
 
 (def case-insensitive-map
-  (-> empty-poly-map
-      (poly/assoc
+  (-> {:other :keys :in :a :regular :map}
+      (w/assoc
        :assoc     (fn [m k v]      (assoc m (normalize-key k) v))
        :dissoc    (fn [m k]        (dissoc m (normalize-key k)))
        :contains? (fn [m k]        (contains? m (normalize-key k)))
@@ -115,12 +114,12 @@ Use `poly/assoc` to attach behavior handlers using simple keywords. The first ar
 
 (get headers "content-type") ;=> "application/json"
 (contains? headers "CONTENT-TYPE") ;=> true
-(dissoc headers "Content-type") ;=> {}
+(dissoc headers "Content-type") ;=> {:other :keys :in :a :regular :map}
 ```
 
 ## Core Concept: High-Level Behaviors
 
-The high-level `poly/assoc` function associates handler functions with specific behavior keywords. These keywords generally correspond to common map operations.
+The high-level `w/assoc` function associates handler functions with specific behavior keywords. These keywords generally correspond to common map operations.
 
 ### Available Behavior Keywords:
 
@@ -152,26 +151,23 @@ The high-level `poly/assoc` function associates handler functions with specific 
     * Handler signature: `(fn [m] ...)`
     * _Must return:_ A string representation.
 
-_(Note: More behaviors might be added. Refer to the `com.jolygon.poly-map.api-0/assoc` docstring for the definitive list.)_
-
-When you use `poly/assoc`, it translates the behavior keyword (e.g., `:get`) into one or more low-level implementation keys (e.g., `::pm/valAt_k`, `::pm/valAt_k_nf`) and registers your handler function appropriately using the low-level `assoc-impl` mechanism.
+When you use `w/assoc`, it translates the behavior keyword (e.g., `:get`) into one or more low-level implementation keys (e.g., `:valAt_k`, `:valAt_k_nf`) and registers your handler function appropriately using the low-level `assoc-impl` mechanism. However, if a high level key is not available, `w/assoc` behaves just like `assoc-impl`, so you can use `w/assoc` for both.
 
 ## Advanced Usage (Low-Level API)
 
 For finer control, direct access to underlying protocol/interface methods, or to implement behaviors not covered by the high-level keywords (like complex transient interactions or read-only maps), you can use the low-level API.
 
-1. **Structure**: A `PolyMap` internally holds:
-    - `m`: The underlying persistent map holding the actual data.
-    - `impls`: A persistent map where keys are specific **namespaced keywords** and values are functions that override default behavior.
-    - `metadata`: The map's metadata.
+1. **Structure**: A `WrapMap` internally holds:
+    - `e`: A persistent map where keys are reserved, specific **unqualified keywords** and values are functions that override default implementation for the method associated with the keyword.
+    - `m`: The underlying map holding the actual data.
 
-2. **Implementation Keys**: Override functions are associated with namespaced keyword keys defined in:
-    - `com.jolygon.poly-map.api-0.keys`: For persistent map operations (e.g., `::pm/valAt_k_nf`).
-    - `com.jolygon.poly-map.api-0.trans.keys`: For transient map operations (e.g., `::tpm/assoc_k_v`).
+2. **Implementation Keys**: Override functions are associated with namespace _unqualified_ keyword keys.
+    - For persistent map operations (e.g., `:valAt_k_nf`)
+    - For transient map operations (e.g., `:T_assoc_k_v`)
 
-3. **Override Function Signatures**: Low-level override functions receive more arguments (see `keys.cljc` and `trans/keys.cljc` docstrings for details). They often need to return a new `PolyMap` instance (for persistent ops) or `this` (for transient ops).
+3. **Override Function Signatures**: Low-level override functions receive more arguments. They often need to return a variant of `WrapMap` or `TransientWrapMap` using the `<-` constructor function - in the form of: `(<- e m)`.
 
-4. **Providing Implementations**: Use `poly/assoc-impl`, `poly/dissoc-impl`, `poly/set-impls`.
+4. **Providing Low-Level Implementations**: Use `w/assoc-impl`, `w/dissoc-impl`, `w/with-wrap`.
 
 ```clojure
 ;; Example: Read-Only Map (Requires Low-Level API)
@@ -179,18 +175,18 @@ For finer control, direct access to underlying protocol/interface methods, or to
   (throw (UnsupportedOperationException. "Map is read-only")))
 
 (def read-only-map-impls
- {::pm/assoc_k_v    read-only-error ;; Override persistent assoc
-  ::pm/without_k    read-only-error ;; Override persistent dissoc
-  ::pm/cons_v       read-only-error ;; Override persistent conj
-  ::pm/assocEx_k_v  read-only-error
+ {:assoc_k_v   read-only-error ;; Override persistent assoc
+  :without_k   read-only-error ;; Override persistent dissoc
+  :cons_v      read-only-error ;; Override persistent conj
+  :assocEx_k_v read-only-error
   ;; Override transient mutations too
-  ::tpm/assoc_k_v    read-only-error
-  ::tpm/without_k    read-only-error
-  ::tpm/conj_entry   read-only-error})
+  :T_assoc_k_v read-only-error
+  :T_without_k read-only-error
+  :T_conj_v    read-only-error})
 
 (def read-only-m
-  (-> (poly-map :a 1)
-      (poly/set-impls read-only-map-impls))) ;; Use set-impls to replace all impls
+  (-> (wrap :a 1)
+      (w/vary merge read-only-map-impls)))
 
 ;; Usage
 (get read-only-m :a) ;=> 1
@@ -204,39 +200,39 @@ For finer control, direct access to underlying protocol/interface methods, or to
 
 For more detailed examples covering both APIs, see:
 
-- [examples-high-level.md](./bench/ex/examples-high-level.md) (todo) (using `poly/assoc` with keywords)
-- [examples.md](./bench/ex/examples.md) (using `poly/assoc-impl` with `::pm/...` keys)
+- [examples-high-level.md](./bench/ex/examples-high-level.md) (todo) (using `wrap/assoc` with keywords)
+- [examples.md](./bench/ex/examples.md) (using `wrap/assoc-impl` with `:...` keys)
 
 ### Performance
 
 Significant performance optimizations have been implemented, including specializing internal types and optimizing constructors.
 
-* **Overall**: Based on recent benchmarks (Run 5/6), baseline `poly-map` operations (reads, writes, construction, reduction, batch transient updates) now perform very close to, and sometimes exceed, the speed of standard Clojure/Script hash maps and transients.
-* **CLJ**: The geometric mean across baseline operations showed `poly-map` at ~95% the speed of standard maps.
-* **CLJS**: The geometric mean across baseline operations showed `poly-map` at ~72% the speed of standard maps, heavily influenced by the `persistent!` cost. Many individual CLJS operations (writes, reductions) were faster than standard maps.
-* **Bottleneck**: The primary remaining bottleneck relative to standard maps appears to be the cost of transitioning from a transient poly-map back to a persistent one (`persistent!`), especially in ClojureScript.
-* **Overrides**: Adding custom behavior via handlers still incurs some overhead compared to baseline poly-map operations, which is expected. However, the baseline is now much faster.
+* **Overall**: Based on recent benchmarks (Run 5/6), baseline `wrap` map operations (reads, writes, construction, reduction, batch transient updates) now perform very close to, and sometimes exceed, the speed of standard Clojure/Script hash maps and transients.
+* **CLJ**: The geometric mean across baseline operations showed `wrap` maps at ~95% the speed of standard maps.
+* **CLJS**: The geometric mean across baseline operations showed `wrap` maps at ~72% the speed of standard maps, heavily influenced by the `persistent!` cost. Many individual CLJS operations (writes, reductions) were faster than standard maps.
+* **Bottleneck**: The primary remaining bottleneck relative to standard maps appears to be the cost of transitioning from a transient `wrap` back to a persistent one (`persistent!`), especially in ClojureScript.
+* **Overrides**: Adding custom behavior via handlers still incurs some overhead compared to baseline `wrap` map operations, which is expected. However, the baseline is now much faster.
 
-See ./bench/ex/clj-bench.md for Clojure benchmark details and ./bench/ex/cljs-bench.md for ClojureScript benchmark details. Contributions for further optimization are welcome!
+See [./bench/ex/clj-bench.md](./bench/ex/clj-bench.md) for Clojure benchmark details and [./bench/ex/cljs-bench.md](./bench/ex/cljs-bench.md) for ClojureScript benchmark details. Contributions for further optimization are welcome!
 
 ### See Also
 
-* **Potemkin** (`def-map-type`): Potemkin's `def-map-type` is excellent for creating _new, specific map-like types_ that efficiently implement map interfaces, often based on delegating to underlying fields or structures. Choose `def-map-type` when you need a new, static, record-like data type with map semantics. Choose `poly-map` when you want to add dynamic behaviors (validation, logging, computation, interception) to existing map data or general-purpose map structures without defining a whole new type, or when you want to change behaviors dynamically using `assoc-impl`/`set-impls`.
-* `defrecord` / `deftype`: Suitable for creating fixed-schema, efficient data structures. They can implement protocols for map-like behavior, but you implement the methods directly. Less flexible for dynamic behavior modification compared to `poly-map`.
-* **Protocols**: Clojure's protocols allow defining interfaces that different types can implement. You could define a protocol for custom map behavior, but `poly-map` provides a ready-made implementation structure focused specifically on wrapping and intercepting standard map operations.
-* **Schema Libraries (Malli, Spec)**: Primarily focused on data validation and specification, often used externally to map operations rather than being baked into the map's behavior itself, although they can be integrated using `poly-map` handlers (as shown in examples).
-* **Proxy**: Allows dynamic implementation of interfaces, but generally comes with a larger performance overhead than `deftype` or `poly-map`'s approach.
+* **Potemkin** (`def-map-type`): Potemkin's `def-map-type` is excellent for creating _new, specific map-like types_ that efficiently implement map interfaces, often based on delegating to underlying fields or structures. Choose `def-map-type` when you need a new, static, record-like data type with map semantics. Choose `wrap` maps when you want to add dynamic behaviors (validation, logging, computation, interception) to existing map data or general-purpose map structures without defining a whole new type, or when you want to change behaviors dynamically using `assoc-impl`/`vary`.
+* `defrecord` / `deftype`: Suitable for creating fixed-schema, efficient data structures. They can implement protocols for map-like behavior, but you implement the methods directly. Less flexible for dynamic behavior modification compared to `wrap` maps.
+* **Protocols**: Clojure's protocols allow defining interfaces that different types can implement. You could define a protocol for custom map behavior, but `wrap` maps provide a ready-made implementation structure focused specifically on wrapping and intercepting standard map operations.
+* **Schema Libraries (Malli, Spec)**: Primarily focused on data validation and specification, often used externally to map operations rather than being baked into the map's behavior itself, although they can be integrated using `wrap` handlers (as shown in examples).
+* **Proxy**: Allows dynamic implementation of interfaces, but generally comes with a larger performance overhead than `deftype` or `wrap` map's approach.
 
 ### Changelog
 
 #### v0.1.0 (YYYY-MM-DD)
 
 * Major Performance Optimizations:
-  * Implemented specialized internal types (PolyMap+...) to significantly speed up baseline assoc and get operations by reducing runtime dispatch overhead.
-  * Optimized poly-map constructor, especially when called via apply, bringing performance close to native hash-map.
+  * Implemented specialized internal types (WrapMap+...) to significantly speed up baseline assoc and get operations by reducing runtime dispatch overhead.
+  * Optimized `wrap` constructor, especially when called via apply, bringing performance close to native hash-map.
   * Improved transient batch assoc! performance to be nearly on par with native transients.
   * Improved persistent! performance, though it remains an area with overhead compared to native maps.
-* Introduced High-Level API: Added poly/assoc and poly/dissoc functions using simple keywords (e.g., :get, :assoc) for easier customization of common behaviors.
+* Introduced High-Level API: Added wrap/assoc and wrap/dissoc functions using simple keywords (e.g., :get, :assoc) for easier customization of common behaviors.
 * Added examples-high-level.md (TODO) and updated documentation.
 
 ### Development
@@ -255,7 +251,12 @@ To run benchmarks:
 
 # Run Clojure benchmarks
 ```bash
-clj -M:libra
+clj -M:benchmark-clj
+```
+
+# Run ClojureScript benchmarks
+```bash
+clj -M:benchmark-cljs-node
 ```
 
 ### License
