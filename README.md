@@ -13,8 +13,8 @@ Suppose you want to instrument a map so that you can debug something that is goi
 ```clojure
 (-> {:a 1}
     (w/assoc
-      :assoc #(do (when (= :easter! %3) (prn :assoc :egg! %2)) (assoc %1 %2 %3))
-      :get #(let [r (get %1 %2)] (when (= :easter! r) (prn :get :egg! %2)) r))
+      :assoc #(do (when (= :easter! %3) (prn :egg! :assoc %2)) (assoc %1 %2 %3))
+      :get #(let [r (get %1 %2)] (when (= :easter! r) (prn :egg! :get %2)) r))
     (assoc :b 2)
     #_...
     (assoc :5ecr3t :easter!)
@@ -24,7 +24,7 @@ Suppose you want to instrument a map so that you can debug something that is goi
     #_...
     w/unwrap
     (assoc :done 1))
-; :assoc :egg! :5ecr3t
+; :egg! :assoc :5ecr3t
 {:a 1, :b 2, :5ecr3t :redacted, :done 1}
 ```
 
@@ -267,8 +267,8 @@ For finer control, direct access to underlying protocol/interface methods, or to
 
 For more detailed examples covering both APIs, see:
 
-- [High level examples](./bench/ex/examples-high-level.md) (using `w/assoc` with keywords)
-- [Low level examples](./bench/ex/examples.md) (using `w/vary`, etc.)
+- [High level examples](./doc/examples-high-level.md) (using `w/assoc` with keywords)
+- [Low level examples](./doc/examples.md) (using `w/vary`, etc.)
 
 ### Performance
 
@@ -280,7 +280,7 @@ Significant performance optimizations have been implemented, including specializ
 * **Bottleneck**: The primary remaining bottleneck relative to standard maps appears to be the cost of transitioning from a transient `wrap` back to a persistent one (`persistent!`), especially in ClojureScript.
 * **Overrides**: Adding custom behavior via handlers still incurs some overhead compared to baseline `wrap` map operations, which is expected. However, the baseline is now much faster.
 
-See [./bench/ex/clj-bench.md](./bench/ex/clj-bench.md) for Clojure benchmark details and [./bench/ex/cljs-bench.md](./bench/ex/cljs-bench.md) for ClojureScript benchmark details. Contributions for further optimization are welcome!
+See [./bench/ex/clj-bench.md](./doc/clj-bench.md) for Clojure benchmark details and [./bench/ex/cljs-bench.md](./doc/cljs-bench.md) for ClojureScript benchmark details. Contributions for further optimization are welcome!
 
 ### See Also
 
