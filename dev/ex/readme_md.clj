@@ -2,6 +2,22 @@
   (:require
    [com.jolygon.wrap-map.api-0 :as w :refer [wrap]]))
 
+(-> {:a 1}
+    (w/assoc
+      :assoc #(do (when (= :easter! %3) (prn :egg! %2)) (assoc %1 %2 %3)))
+    (assoc :b 2)
+    #_...
+    #_...
+    (assoc :5ecr3t :easter!)
+    #_...
+    (assoc :5ecr3t :obfuscated)
+    #_...
+    #_...
+    w/unwrap
+    (assoc :done 1))
+; :egg! :5ecr3t
+{:a 1, :b 2, :5ecr3t :obfuscated, :done 1}
+
 (def m1 (wrap :a 1 :b 2))
 #_m1
 ;=> {:a 1, :b 2}
@@ -126,6 +142,14 @@ m2 ;=> {:c 3, :b 2, :a 1}
 
 ;; `{:a 1}` became side-effecting halfway through a pipeline, then back to a normal map, continuing through the pipeline.
 
+(-> {:a 1}
+    (w/assoc
+      :assoc #(if (= :easter %2) (throw (ex-info "Found the egg!" %1)) (assoc %1 %2 %3)))
+    (assoc :b 2)
+    (assoc :easter :egg)
+    (assoc :c 3)
+    w/unwrap
+    (assoc :done 1))
 
 ;; Just do it with w/assoc:
 

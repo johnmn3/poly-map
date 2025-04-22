@@ -6,7 +6,31 @@ _"map type maps"_
 
 `wrap` maps provide a flexible way to create specialized map-like data structures in Clojure and ClojureScript. It allows you to intercept and customize standard map operations like `get`, `assoc`, `dissoc`, function invocation, printing, and more. This enables built-in validation, side effects, lazy loading, default values, case-insensitive keys, and other custom behaviors without needing to reimplement all the underlying map interfaces.
 
-Think of it as adding middleware or aspects directly to your map data structure. It offers two ways to customize behavior:
+### Elevator Pitch
+
+Suppose you want to instrument a map so that you can debug something that is going on deep in some opaque pipeline you're working on:
+
+```clojure
+(-> {:a 1}
+    (w/assoc
+      :assoc #(do (when (= :easter! %3) (prn :egg! %2)) (assoc %1 %2 %3)))
+    (assoc :b 2)
+    #_...
+    #_...
+    (assoc :5ecr3t :easter!)
+    #_...
+    (assoc :5ecr3t :obfuscated)
+    #_...
+    #_...
+    w/unwrap
+    (assoc :done 1))
+; :egg! :5ecr3t
+{:a 1, :b 2, :5ecr3t :obfuscated, :done 1}
+```
+
+Now you can! And, notice, after `unwrap`ing the map the instrumentation disappears. It's magic!
+
+Think of it as adding middleware or aspects directly to your map data structure. It's similar to the proxy or decorator pattern, but more functional. It offers two ways to customize behavior:
 
 1.  **High-Level API:** The casual and easy way. Uses simple keywords (e.g., `:get`, `:assoc`) to attach handlers for common map operations. Easier to use for most scenarios in applications or application specific data wrangling.
 2.  **Low-Level API:** Provides fine-grained control by allowing overrides for specific underlying protocol/interface methods using namespaced keywords (e.g., `:valAt_k_nf`, `:T_assoc_k_v`). Useful for advanced cases or overriding methods not exposed by the high-level API. Prefer the low-level API when building libraries on top of `wrap` maps. Low level API versions are guaranteed remain stable.
