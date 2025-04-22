@@ -1,0 +1,6 @@
+{:cljdoc.doc/tree
+ [["Readme" {:file "README.md"}]
+  ["High Level Examples" {:file "doc/examples-high-level.md"}]
+  ["Low Level Examples" {:file "doc/examples.md"}]
+  ["Clojure Benchmarks" {:file "doc/clj-bench.md"}]
+  ["ClojureScript Benchmarks" {:file "doc/cljs-bench.md"}]]}
