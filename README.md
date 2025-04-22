@@ -13,19 +13,19 @@ Suppose you want to instrument a map so that you can debug something that is goi
 ```clojure
 (-> {:a 1}
     (w/assoc
-      :assoc #(do (when (= :easter! %3) (prn :assoc! :egg! %2)) (assoc %1 %2 %3))
+      :assoc #(do (when (= :easter! %3) (prn :assoc :egg! %2)) (assoc %1 %2 %3))
       :get #(let [r (get %1 %2)] (when (= :easter! r) (prn :get :egg! %2)) r))
     (assoc :b 2)
     #_...
     (assoc :5ecr3t :easter!)
     #_...
-    (assoc :5ecr3t :obfuscated)
+    (assoc :5ecr3t :redacted)
     #_...
     #_...
     w/unwrap
     (assoc :done 1))
-; :assoc! :egg! :5ecr3t
-{:a 1, :b 2, :5ecr3t :obfuscated, :done 1}
+; :assoc :egg! :5ecr3t
+{:a 1, :b 2, :5ecr3t :redacted, :done 1}
 ```
 
 Now you can! And, notice, after `unwrap`ing the map the instrumentation disappears. It's magic!
