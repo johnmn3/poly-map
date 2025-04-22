@@ -4,9 +4,9 @@
 
 (-> {:a 1}
     (w/assoc
-      :assoc #(do (when (= :easter! %3) (prn :egg! %2)) (assoc %1 %2 %3)))
+      :assoc #(do (when (= :easter! %3) (prn :assoc! :egg! %2)) (assoc %1 %2 %3))
+      :get #(let [r (get %1 %2)] (when (= :easter! r) (prn :get :egg! %2)) r))
     (assoc :b 2)
-    #_...
     #_...
     (assoc :5ecr3t :easter!)
     #_...
@@ -15,7 +15,7 @@
     #_...
     w/unwrap
     (assoc :done 1))
-; :egg! :5ecr3t
+; :assoc! :egg! :5ecr3t
 {:a 1, :b 2, :5ecr3t :obfuscated, :done 1}
 
 (def m1 (wrap :a 1 :b 2))
