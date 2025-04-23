@@ -248,7 +248,7 @@
       (f e m new-meta)
       (if (identical? new-meta (.-metadata e))
         this
-        (WrapMap. (assoc e :metadata new-meta) m))))
+        (WrapMap. (assoc e :metadata new-meta) (with-meta m new-meta)))))
   ICounted
   (^number -count [_this]
     (if-let [f (.-count e)]
@@ -409,7 +409,7 @@
       (f e m new-meta)
       (if (identical? new-meta (.-metadata e))
         this
-        (WrapMap+-assoc_k_v. (assoc e :metadata new-meta) m))))
+        (WrapMap+-assoc_k_v. (assoc e :metadata new-meta) (with-meta m new-meta)))))
   ICounted
   (^number -count [_this]
     (if-let [f (.-count e)]
@@ -568,7 +568,7 @@
       (f e m new-meta)
       (if (identical? new-meta (.-metadata e))
         this
-        (WrapMap+-lookup_k. (assoc e :metadata new-meta) m))))
+        (WrapMap+-lookup_k. (assoc e :metadata new-meta) (with-meta m new-meta)))))
   ICounted
   (^number -count [_this]
     (if-let [f (.-count e)]
@@ -727,7 +727,7 @@
       (f e m new-meta)
       (if (identical? new-meta (.-metadata e))
         this
-        (WrapMap+-assoc_k_v|-lookup_k. (assoc e :metadata new-meta) m))))
+        (WrapMap+-assoc_k_v|-lookup_k. (assoc e :metadata new-meta) (with-meta m new-meta)))))
   ICounted
   (^number -count [_this]
     (if-let [f (.-count e)]
@@ -829,7 +829,7 @@
     (construct (map->Impls e) m)
     (let [pwrap (get-wrap-persistent e)
           twrap (get-wrap-transient e)
-          new-impls (assoc e :<- pwrap :pwrap pwrap :twrap twrap)]
+          new-impls (assoc e :<- pwrap :pwrap pwrap :twrap twrap :metadata (meta m))]
       (if transient?
         (twrap new-impls m)
         (pwrap new-impls m)))))

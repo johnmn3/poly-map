@@ -314,7 +314,7 @@
   (withMeta [_this new-meta]
     (if-let [f (.-withMeta_meta e)]
       (f e m new-meta)
-      (WrapMap. (assoc e :metadata new-meta) m)))
+      (WrapMap. (assoc e :metadata new-meta) (with-meta m new-meta))))
   IMeta
   (meta [_this]
     (if-let [f (.-meta e)]
@@ -513,7 +513,7 @@
   (withMeta [_this new-meta]
     (if-let [f (.-withMeta_meta e)]
       (f e m new-meta)
-      (WrapMap+assoc_k_v. (assoc e :metadata new-meta) m)))
+      (WrapMap+assoc_k_v. (assoc e :metadata new-meta) (with-meta m new-meta))))
   IMeta
   (meta [_this]
     (if-let [f (.-meta e)]
@@ -713,7 +713,7 @@
   (withMeta [_this new-meta]
     (if-let [f (.-withMeta_meta e)]
       (f e m new-meta)
-      (WrapMap+valAt_k. (assoc e :metadata new-meta) m)))
+      (WrapMap+valAt_k. (assoc e :metadata new-meta) (with-meta m new-meta))))
   IMeta
   (meta [_this]
     (if-let [f (.-meta e)]
@@ -912,7 +912,7 @@
   (withMeta [_this new-meta]
     (if-let [f (.-withMeta_meta e)]
       (f e m new-meta)
-      (WrapMap+assoc_k_v|valAt_k. (assoc e :metadata new-meta) m)))
+      (WrapMap+assoc_k_v|valAt_k. (assoc e :metadata new-meta) (with-meta m new-meta))))
   IMeta
   (meta [_this]
     (if-let [f (.-meta e)]
@@ -1006,6 +1006,7 @@
           wrap-transient (get-wrap-transient e)
           new-impls (assoc e
                            :<- wrap-persistent
+                           :metadata (meta m)
                            :pwrap wrap-persistent
                            :twrap wrap-transient)]
       (if transient?

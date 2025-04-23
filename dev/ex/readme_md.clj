@@ -18,6 +18,14 @@
 ; :assoc! :egg! :5ecr3t
 {:a 1, :b 2, :5ecr3t :obfuscated, :done 1}
 
+;; preserve metadata
+(def x (with-meta {} {:a 1}))
+(meta x) ;=> {:a 1}
+(def y (wrap x))
+(meta y) ;=> {:a 1}
+(def z (w/unwrap y))
+(meta z) ;=> {:a 1}
+
 (def m1 (wrap :a 1 :b 2))
 #_m1
 ;=> {:a 1, :b 2}
