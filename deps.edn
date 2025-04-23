@@ -8,7 +8,7 @@
   :build {:deps {io.github.abogoyavlensky/slim {:mvn/version "0.3.2"}
                  slipset/deps-deploy {:mvn/version "0.2.2"}}
           :ns-default slim.lib
-          :exec-args {:version "0.1.10"
+          :exec-args {:version "0.1.11"
                       :lib com.jolygon/wrap-map
                       :url "https://github.com/johnmn3/wrap-map"
                       :description "map type maps"

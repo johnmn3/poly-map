@@ -73,7 +73,7 @@ Add the following dependency:
 **deps.edn:**
 
 ```clojure
-com.jolygon/wrap-map {:mvn/version "0.1.10"}
+com.jolygon/wrap-map {:mvn/version "0.1.11"}
 ```
 
 ## Basic Usage (High-Level API)
