@@ -20,7 +20,7 @@
 
 (def allowable-impls
   #{:frozen? :metadata :this :wrap :twrap :pwrap :<-
-    :toString :-conj_v :-empty :-without_k :-assoc_k_v :-contains-key?_k
+    :toString :-conj_v :-empty :-dissoc_k :-assoc_k_v :-contains-key?_k
     :-find_k :-seq :-meta :withMeta_new-meta :-count :-lookup_k
     :-lookup_k_nf :kv-reduce_f_init :T_-conj! :T_-assoc!_k_v :T_-dissoc!_k
     :T_-lookup_k :T_-lookup_k_nf :T_-count :invoke :invoke-variadic
@@ -29,7 +29,7 @@
 #_{:clj-kondo/ignore [:shadowed-var]}
 (defrecord Impls
            [frozen? metadata this wrap twrap pwrap <-
-            toString -conj_v -empty -without_k -assoc_k_v -contains-key?_k -find_k
+            toString -conj_v -empty -dissoc_k -assoc_k_v -contains-key?_k -find_k
             -seq -meta withMeta_new-meta -count -lookup_k -lookup_k_nf kv-reduce_f_init
             T_-conj! T_-assoc!_k_v T_-dissoc!_k T_-lookup_k T_-lookup_k_nf T_-count
             invoke invoke-variadic -pr-writer_writer_opts])
@@ -215,7 +215,7 @@
       (WrapMap. e (-empty m))))
   IMap
   (^WrapMap -dissoc [_this k]
-    (if-let [f (.--without_k e)]
+    (if-let [f (.--dissoc_k e)]
       (f e m k)
       (WrapMap. e (-dissoc m k))))
 
@@ -375,7 +375,7 @@
       (WrapMap+-assoc_k_v. e (-empty m))))
   IMap
   (^WrapMap+-assoc_k_v -dissoc [_this k]
-    (if-let [f (.--without_k e)]
+    (if-let [f (.--dissoc_k e)]
       (f e m k)
       (WrapMap+-assoc_k_v. e (-dissoc m k))))
 
@@ -536,7 +536,7 @@
       (WrapMap+-lookup_k. e (-empty m))))
   IMap
   (^WrapMap+-lookup_k -dissoc [_this k]
-    (if-let [f (.--without_k e)]
+    (if-let [f (.--dissoc_k e)]
       (f e m k)
       (WrapMap+-lookup_k. e (-dissoc m k))))
   IAssociative
@@ -695,7 +695,7 @@
       (WrapMap+-assoc_k_v|-lookup_k. e (-empty m))))
   IMap
   (^WrapMap+-assoc_k_v|-lookup_k -dissoc [_this k]
-    (if-let [f (.--without_k e)]
+    (if-let [f (.--dissoc_k e)]
       (f e m k)
       (WrapMap+-assoc_k_v|-lookup_k. e (-dissoc m k))))
   IAssociative
