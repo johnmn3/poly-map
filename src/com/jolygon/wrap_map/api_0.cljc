@@ -92,9 +92,13 @@
                                      ([_e m k nf]
                                       (handler-fn m k nf)))
                   #?@(:clj [:valAt_k internal-get
-                            :valAt_k_nf internal-get-nf]
+                            :valAt_k_nf internal-get-nf
+                            :T_valAt_k internal-get               ;; <- get can handle both persistent and transient
+                            :T_valAt_k_nf internal-get-nf]
                       :cljs [:-lookup_k internal-get
-                             :-lookup_k_nf internal-get-nf])))
+                             :-lookup_k_nf internal-get-nf
+                             :T-lookup_k internal-get
+                             :T-lookup_k_nf internal-get-nf])))
     :assoc
     (let [internal-assoc (fn [e m k v]
                            (let [new-m (handler-fn m k v)]
@@ -108,7 +112,7 @@
                               (make-wrap e new-m)))]
       (assoc-impl pm
                   #?@(:clj [:without_k internal-dissoc]
-                      :cljs [:-without_k internal-dissoc])))
+                      :cljs [:-dissoc_k internal-dissoc])))
     :contains?
     (let [internal-contains (fn [_e m k] (handler-fn m k))]
       (assoc-impl pm
@@ -129,6 +133,20 @@
                   :toString internal-to-string
                   #?@(:clj [:print-method_writer internal-pr-writer]
                       :cljs [:-pr-writer_writer_opts internal-pr-writer])))
+    ;; :transient
+    :assoc!
+    (let [T_internal-assoc (fn [_e m k v]
+                             (handler-fn m k v))]
+      (assoc-impl pm
+                  #?@(:clj [:T_assoc_k_v T_internal-assoc]
+                      :cljs [:T_-assoc_k_v T_internal-assoc])))
+
+    :dissoc!
+    (let [T_internal-dissoc (fn [_e m k]
+                              (handler-fn m k))]
+      (assoc-impl pm
+                  #?@(:clj [:T_without_k T_internal-dissoc]
+                      :cljs [:T_-dissoc!_k T_internal-dissoc])))
     ; default
     (assoc-impl pm behavior-key handler-fn)))
 
@@ -137,10 +155,13 @@
 
 (defn p-dissoc [pm behavior-key]
   (case behavior-key
-    :get (dissoc-impl pm :valAt_k :valAt_k_nf)
-    :assoc (dissoc-impl pm :assoc_k_v)
-    :dissoc (dissoc-impl pm :without_k)
-    :contains? (dissoc-impl pm :containsKey_k)
+    :get (dissoc-impl pm #?@(:clj [:valAt_k :valAt_k_nf]
+                             :cljs [:-lookup_k :-lookup_k_nf]))
+    :assoc (dissoc-impl pm #?(:clj :assoc_k_v :cljs :-assoc_k_v))
+    :assoc! (dissoc-impl pm #?(:clj :T_assoc_k_v :cljs :T_-assoc_k_v))
+    :dissoc (dissoc-impl pm #?(:clj :without_k :cljs :-dissoc_k))
+    :dissoc! (dissoc-impl pm #?(:clj :T_without_k :cljs :T_-dissoc_k))
+    :contains? (dissoc-impl pm #?(:clj :containsKey_k :cljs :-contains-key?_k))
     :invoke (dissoc-impl pm :invoke-variadic)
     (dissoc-impl pm behavior-key)))
 

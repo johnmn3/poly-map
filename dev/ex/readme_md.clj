@@ -2,22 +2,6 @@
   (:require
    [com.jolygon.wrap-map.api-0 :as w :refer [wrap]]))
 
-(-> {:a 1}
-    (w/assoc
-      :assoc #(do (when (= :easter! %3) (prn :assoc! :egg! %2)) (assoc %1 %2 %3))
-      :get #(let [r (get %1 %2)] (when (= :easter! r) (prn :get :egg! %2)) r))
-    (assoc :b 2)
-    #_...
-    (assoc :5ecr3t :easter!)
-    #_...
-    (assoc :5ecr3t :obfuscated)
-    #_...
-    #_...
-    w/unwrap
-    (assoc :done 1))
-; :assoc! :egg! :5ecr3t
-{:a 1, :b 2, :5ecr3t :obfuscated, :done 1}
-
 ;; preserve metadata
 (def x (with-meta {} {:a 1}))
 (meta x) ;=> {:a 1}
@@ -176,3 +160,22 @@ m2 ;=> {:c 3, :b 2, :a 1}
 ; [Transient] assoc! key: :x val: 100
 ; [Transient] assoc! key: :y val: 200
 ;=> {:a 1, :x 100, :y 200, :z 300}
+
+(-> {:a 1}
+    (w/assoc
+      :assoc #(do (when (= :easter! %3) (prn :egg! :assoc %2)) (assoc %1 %2 %3))
+      :assoc! #(do (when (= :easter! %3) (prn :egg! :assoc! %2)) (assoc! %1 %2 %3))
+      :get #(let [r (get %1 %2)] (when (= :easter! r) (prn :egg! :get %2)) r))
+    (assoc :b 2)
+    #_...
+    transient
+    (assoc! :5ecr3t :easter!)
+    persistent!
+    #_...
+    (assoc :5ecr3t :redacted)
+    #_...
+    #_...
+    w/unwrap
+    (assoc :done 1))
+; :egg! :assoc! :5ecr3t
+{:a 1, :b 2, :5ecr3t :redacted, :done 1}

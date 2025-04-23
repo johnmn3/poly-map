@@ -14,17 +14,20 @@ Suppose you want to instrument a map so that you can debug something that is goi
 (-> {:a 1}
     (w/assoc
       :assoc #(do (when (= :easter! %3) (prn :egg! :assoc %2)) (assoc %1 %2 %3))
+      :assoc! #(do (when (= :easter! %3) (prn :egg! :assoc! %2)) (assoc! %1 %2 %3))
       :get #(let [r (get %1 %2)] (when (= :easter! r) (prn :egg! :get %2)) r))
     (assoc :b 2)
     #_...
-    (assoc :5ecr3t :easter!)
+    transient
+    (assoc! :5ecr3t :easter!)
+    persistent!
     #_...
     (assoc :5ecr3t :redacted)
     #_...
     #_...
     w/unwrap
     (assoc :done 1))
-; :egg! :assoc :5ecr3t
+; :egg! :assoc! :5ecr3t
 {:a 1, :b 2, :5ecr3t :redacted, :done 1}
 ```
 
@@ -198,7 +201,7 @@ For finer control, direct access to underlying protocol/interface methods, or to
 
 2. **Implementation Keys**: Override functions are associated with namespace _unqualified_ keyword keys.
     - For persistent map operations in Clojurescript:
-        > :toString :-conj_v :-empty :-without_k :-assoc_k_v :-contains-key?_k :-find_k :-seq :-meta :withMeta_new-meta :-count :-lookup_k :-lookup_k_nf :kv-reduce_f_init  :invoke :invoke-variadic :-pr-writer_writer_opts
+        > :toString :-conj_v :-empty :-dissoc_k :-assoc_k_v :-contains-key?_k :-find_k :-seq :-meta :withMeta_new-meta :-count :-lookup_k :-lookup_k_nf :kv-reduce_f_init  :invoke :invoke-variadic :-pr-writer_writer_opts
     - For transient map operations in Clojurescript:
         > :T_-conj! :T_-assoc!_k_v :T_-dissoc!_k :T_-lookup_k :T_-lookup_k_nf :T_-count
     - For persistent map operations in Clojure:
